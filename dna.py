@@ -11,6 +11,7 @@
 #For example a 3x3 grid of entities that can attack eat share etc. The grid is populated with entities regularly.
 #In fact each cell has multiple entities. These entities can interact at various ranges with surrounding cells. They also have spandrils.
 #These spandrils create the stats of larger entities that can interact with adjacent cells as well.
+import tools
 import random
 import string
 import textdistance
@@ -21,6 +22,7 @@ rule_count = 10
 functions = ["count","approach"]
 def make_rule():
     return {"function":random.choice(functions)}
+
 def make_word():
     the_word =""
     for i in range(word_length):
@@ -83,6 +85,7 @@ def evaluate(rule, word, to_word):
 rules = []
 for i in range(rule_count):
     rules.append(make_rule())
+
 health_rules = []
 damage_rules = []
 for i in range(rule_count):
@@ -90,103 +93,11 @@ for i in range(rule_count):
     damage_rules.append(make_rule())
 
 
-def generate_random_integers_summing_to_100(num_count):
-    """
-    Generates a list of 'num_count' random integers (>= 0) that sum to 100.
-    """
-    if num_count <= 0:
-        return []
-
-    numbers = []
-    remaining_sum = 100
-
-    for i in range(num_count - 1):
-        # The next random number must be between 0 and the remaining sum
-        num = random.randint(0, remaining_sum)
-        numbers.append(num)
-        remaining_sum -= num
-
-    # The last number is exactly the remaining sum
-    numbers.append(remaining_sum)
-    return numbers
 
 def make_creature(word):
     creature = {}
     creature["health"] = 0.1+ calculate(word,health_rules)
-    creature["energy"] = 100
-    creature["options"] = ["attack","rest","breed"]
-    creature["weights"] = generate_random_integers_summing_to_100(len(creature["options"]))
-    creature["attack"] = random.random()
     creature["damage"] = 0.1+ calculate(word,damage_rules)
     creature["dna"] = word
     return creature
 
-damage = calculate(word,rules)
-print(rules)
-print(damage)
-
-class Rule:
-    def __init__(self):
-        self.name = "shmame"
-rulio = Rule()
-
-
-message = "" # Initialize message to an empty string
-creatures = 3
-my_creatures = []
-enemy_creatures = []
-def initiate():
-    global my_creatures
-    global enemy_creatures
-    my_creatures = []
-    enemy_creatures = []
-    for i in range(creatures):
-        message = input("Enter DNA")  # Get user input inside the loop
-        my_creature = make_creature(message)
-        my_creature["team"] = "good"
-        my_creatures.append(my_creature)
-        enemy_creature = make_creature(make_word())
-        enemy_creature["team"] = "evil"
-        enemy_creatures.append(enemy_creature)
-
-initiate()
-my_current = 0
-enemy_current = 0
-while message != 'quit':
-    good = my_creatures[my_current]
-    bad = enemy_creatures[enemy_current]
-    print(bad)
-    for creature in my_creatures:
-        print(creature)
-    message = input("Action?") # Get user input inside the loop
-    match message:
-        case "a":
-            good["health"] -= bad["damage"]
-            bad["health"] -= good["damage"]
-
-        case "quit":
-            wordtest = "aaaaaa"
-            to_wordtest = "aaaaaa"
-            functiontest = "count"
-            damagetest = evaluate(functiontest,wordtest,to_wordtest)
-            print("testing")
-            print(wordtest)
-            print(to_wordtest)
-            print(damagetest)
-        case _:
-            if message.isnumeric() and int(message)<len(my_creatures):
-                my_creatures.insert(0,my_creatures.pop(int(message)))
-    if good["health"]<=0:
-        my_creatures.pop(0)
-    if bad["health"]<=0:
-        enemy_creatures.pop(0)
-    if not(enemy_creatures):
-        print("victory!")
-        initiate()
-    if not(my_creatures):
-        print("defeat!")
-        initiate()
-
-        #case "close":
-        #lev_dist = textdistance.levenshtein.distance(word, to_word)
-        #sum += math.floor((len(word)/1.5)/lev_dist)
