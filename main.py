@@ -1,62 +1,62 @@
-import dna
-import cell
-import tools
+import cProfile
+import pstats
+from tools import tools
+from animal import Animal
 
 message = "" # Initialize message to an empty string
-creatures = 3
-my_creatures = []
-enemy_creatures = []
+count = 10
+animals = []
 
 def initiate():
-    global my_creatures
-    global enemy_creatures
-    my_creatures = []
-    enemy_creatures = []
-    for i in range(creatures):
-        my_creature = Cell({"team":"good"})
-        my_creatures.append(my_creature)
-        enemy_creature = Cell({"team":"evil"})
-        enemy_creature["team"] = "evil"
-        enemy_creatures.append(enemy_creature)
+    global animals
+    global count
+    animals = []
+    for i in range(count):
+        animal = Animal(**{"team":"evil"})
+        animals.append(animal)
 
 initiate()
-my_current = 0
-enemy_current = 0
-while message != 'quit':
-    good = my_creatures[my_current]
-    bad = enemy_creatures[enemy_current]
-    print(bad)
-    for creature in my_creatures:
-        print(creature)
-    message = input("Action?") # Get user input inside the loop
-    match message:
-        case "a":
-            good["health"] -= bad["damage"]
-            bad["health"] -= good["damage"]
+message = 4 #input("control id?")
+tools.set_control_id(int(message))
+tools.my_cell_dict[tools.get_control_id()] = tools.cell_dict[tools.get_control_id()]
+tools.my_dna = tools.cell_dict[tools.get_control_id()].name
+runs = 80
 
-        case "quit":
-            wordtest = "aaaaaa"
-            to_wordtest = "aaaaaa"
-            functiontest = "count"
-            damagetest = evaluate(functiontest,wordtest,to_wordtest)
-            print("testing")
-            print(wordtest)
-            print(to_wordtest)
-            print(damagetest)
-        case _:
-            if message.isnumeric() and int(message)<len(my_creatures):
-                my_creatures.insert(0,my_creatures.pop(int(message)))
-    if good["health"]<=0:
-        my_creatures.pop(0)
-    if bad["health"]<=0:
-        enemy_creatures.pop(0)
-    if not(enemy_creatures):
-        print("victory!")
-        initiate()
-    if not(my_creatures):
-        print("defeat!")
-        initiate()
+with cProfile.Profile() as profile:
+    while runs:
+        animal_exists = tools.animal_dict.get(tools.get_control_id())
+        cell_exists = tools.cell_dict.get(tools.get_control_id())
+        if not animal_exists and not cell_exists and not tools.performance_run:
+            control_id = tools.get_new_id()
+            if control_id:
+                print("died. You are now: "+str(control_id))
+                tools.set_control_id(int(control_id))
+            else:
+                print("game_over")
+                runs = 0
 
-        #case "close":
-        #lev_dist = textdistance.levenshtein.distance(word, to_word)
-        #sum += math.floor((len(word)/1.5)/lev_dist)
+        for animal in animals:
+            animal.act(animals)
+
+        reduced_animals = []
+        for animal in animals:
+            if animal.cells:
+                reduced_animals.append(animal)
+            else:
+                tools.pop_animal_dict(animal)
+
+        animals = reduced_animals
+        if tools.animal_dict.get(tools.get_control_id()):
+            for animal in animals:
+                print(animal)
+        if tools.performance_run:
+            runs -= 1
+results = pstats.Stats(profile)
+results.sort_stats(pstats.SortKey.TIME)
+results.print_stats()
+results.dump_stats("results.prof")
+
+
+
+
+

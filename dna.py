@@ -29,6 +29,7 @@ def make_word():
         random_letter = random.choice(string.ascii_lowercase)
         the_word += random_letter
     return the_word
+
 word = make_word()
 print(word)
 
@@ -91,8 +92,6 @@ damage_rules = []
 for i in range(rule_count):
     health_rules.append(make_rule())
     damage_rules.append(make_rule())
-
-
 
 def make_creature(word):
     creature = {}
