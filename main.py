@@ -19,7 +19,9 @@ initiate()
 message = 4 #input("control id?")
 tools.set_control_id(int(message))
 tools.my_cell_dict[tools.get_control_id()] = tools.cell_dict[tools.get_control_id()]
-tools.my_dna = tools.cell_dict[tools.get_control_id()].name
+our_cell = tools.cell_dict[tools.get_control_id()]
+our_cell.energy += 50
+tools.my_dna = our_cell.name
 runs = 80
 
 with cProfile.Profile() as profile:

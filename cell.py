@@ -3,7 +3,8 @@ import random
 import dna
 class Cell:
     def __init__(self,**kwargs):
-        self.energy = 100
+        self.mass = 100
+        self.energy = 50
         self.duration = 100
         self.defense = random.random()/2
         self.options = ["compete","rest","breed"]
@@ -13,8 +14,10 @@ class Cell:
         self.action = "rest"
         self.punish = 0
         self.compete = tools.make_weights(2)
+        self.excess = tools.make_weights(2)
         self.last_target = ""
         self.reward = 0
+        self.spent = 0
         for key, value in kwargs.items():
             setattr(self, key, value)
         if not hasattr(self, "name"):
@@ -24,7 +27,7 @@ class Cell:
 
 
     def __str__(self):
-        return str(self.id) + " " + self.name + " " + str(self.energy) + " " + self.action + " " + str(self.activity) +" "+ str(self.last_target) + " " + str(self.reward) + " pain" + str(self.punish)
+        return str(self.id) + " " + self.name + " " + str(self.energy) + " " + self.action + " " + str(self.activity) +" "+ str(self.last_target) + " " + str(self.reward) + " spent" + str(self.spent)
 
     def act(self,animal):
         if self.id == tools.get_control_id():
@@ -55,11 +58,12 @@ class Cell:
                 #could make compete a dict itself
                 grow = self.compete[0]
                 eat = self.compete[1]
-                punish = self.compete[2]
+                #punish = self.compete[2]
                 activity = self.activity*self.energy
                 self.energy -= activity
+                self.spent = activity
                 self.last_target = self.compete
-                return {"cell":self,"grow":grow*activity,"eat":eat*activity}
+                return {"cell":self,"grow":grow*activity,"eat":eat*self.activity}
                 #return {"cell":self,"grow":grow*activity,"eat":eat*activity,"punish":punish*activity}
 
             case "attack":
@@ -90,15 +94,13 @@ class Cell:
 
             case "rest":
                 if animal.action == "rest":
-                    self.energy += 3
-                else:
                     self.energy += 1
 
             case "breed":
                 #Need a mutation chance where new dna name is put in? Maybe add another letter each time a mutant varies. Have mutation chance be a thing. Have budge distance from where it is. Each additional time it gets less?
                 if self.energy > 20:
                     self.energy -= 10
-                    animal.cells.append(Cell(**{"energy":10,"name":self.name, "compete":self.compete,"weights":self.weights, "defense":self.defense, "offense":self.offense}))
+                    animal.cells.append(Cell(**{"energy":10,"name":self.name, "activity":self.activity,"compete":self.compete,"weights":self.weights, "defense":self.defense, "offense":self.offense}))
 
 
 

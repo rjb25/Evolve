@@ -87,7 +87,7 @@ class Animal:
             output = cell.act(self)
             if output:
                 players.append(output)
-                rewards["pot"] += output["grow"] * 4
+                rewards["pot"] += output["grow"] * 2.5
                 #rewards["punish"] += output["punish"]
                 rewards["eats"] += output["eat"]
             #Checking for the dominant cell name
@@ -96,6 +96,7 @@ class Animal:
             else:
                 name_count[cell.name] += 1
 
+        self.offense = rewards["eats"]
         #compete content
         punished_players = []
         for player in players:
@@ -116,7 +117,8 @@ class Animal:
         #kill content
         reduced_cells = []
         for cell in self.cells:
-            cell.energy -= 2
+            #cell.energy -= 2
+            cell.energy -= 1
             if cell.energy > 0.0001:
                 reduced_cells.append(cell)
             else:
@@ -127,7 +129,7 @@ class Animal:
         #If the controlled cells animal id is my id print my cells
         if control_cell and control_cell.animal.id == self.id:
             print("reward " + str(rewards["pot"]))
-            print("fair " + str(rewards["fair"]))
+            #print("fair " + str(rewards["fair"]))
             for cell in self.cells:
                 print(cell)
         if name_count:
