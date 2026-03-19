@@ -6,14 +6,11 @@ class Cell:
         self.mass = 100
         self.energy = 50
         self.duration = 100
-        self.defense = random.random()/2
         self.options = ["compete","rest","breed"]
         self.weights = tools.make_weights(len(self.options))
-        self.offense = random.random()
         self.activity = random.random()
         self.action = "rest"
-        self.punish = 0
-        self.compete = tools.make_weights(2)
+        self.compete = tools.make_weights(3)
         self.excess = tools.make_weights(2)
         self.last_target = ""
         self.reward = 0
@@ -49,7 +46,6 @@ class Cell:
             #Contribute Eat Punish allotment for compete/attack.
             #rest can have allotment for grow which increases your max output and max storage. Rest also decreases your decay and aging.
             #Breed you can choose if the child is high or low potential. You can prefer longevity or efficiency. Invest high vs low.
-            #Top 20% of bad ratio take a hit on punishment.
 
             #The animal will also have a tax rate.
             #Possibly have a rot factor on mass where mass is lost Forcing you to grow at a certain rate or die.
@@ -58,39 +54,12 @@ class Cell:
                 #could make compete a dict itself
                 grow = self.compete[0]
                 eat = self.compete[1]
-                #punish = self.compete[2]
+                share = self.compete[2]
                 activity = self.activity*self.energy
                 self.energy -= activity
                 self.spent = activity
                 self.last_target = self.compete
-                return {"cell":self,"grow":grow*activity,"eat":eat*self.activity}
-                #return {"cell":self,"grow":grow*activity,"eat":eat*activity,"punish":punish*activity}
-
-            case "attack":
-                valid = False
-                target = 0
-                #Don't attack self
-                while not(valid):
-                    if len(animal.cells) < 2:
-                        valid = True
-                    else:
-                        target = random.choice(animal.cells)
-                        if target.id != self.id :
-                            valid = True
-
-                if target:
-                    self.last_target = target.id
-                    defense = target.get_defense()
-                    offense = self.get_offense()
-                    whole = defense + offense
-                    #Both parties lose effort put in, and only attacker stands to gain. Lost effort goes to animal
-                    animal.offense = whole
-                    self.energy -= offense
-                    target.energy -= defense
-                    if random.random() * whole < offense:
-                        #In addition to energy put into defense if you lose an attack you lose the whole effort sum again.
-                        self.energy += min(whole,target.energy)
-                        target.energy -= min(whole,target.energy)
+                return {"cell":self,"grow":grow*activity,"share":share*activity,"eat":eat*activity,"reap":eat*self.activity}
 
             case "rest":
                 if animal.action == "rest":
@@ -100,16 +69,8 @@ class Cell:
                 #Need a mutation chance where new dna name is put in? Maybe add another letter each time a mutant varies. Have mutation chance be a thing. Have budge distance from where it is. Each additional time it gets less?
                 if self.energy > 20:
                     self.energy -= 10
-                    animal.cells.append(Cell(**{"energy":10,"name":self.name, "activity":self.activity,"compete":self.compete,"weights":self.weights, "defense":self.defense, "offense":self.offense}))
+                    animal.cells.append(Cell(**{"energy":10,"name":self.name, "activity":self.activity,"compete":self.compete,"weights":self.weights}))
 
-
-
-
-    def get_defense(self):
-        return self.defense * self.energy * 2
-
-    def get_offense(self):
-        return self.offense * self.energy * 1
 
 
 

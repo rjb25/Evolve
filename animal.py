@@ -78,18 +78,17 @@ class Animal:
     def live(self):
         name_count = {}
 
-        #rewards = {"pot":0,"punish":0,"eats":0,"fair":0}
-        rewards = {"pot":0,"eats":0}
+        rewards = {"pot":0,"eats":0,"reaps":0, "share":0}
         players = []
         for cell in self.cells:
             cell.reward = 0
-            #cell.punish = 0
             output = cell.act(self)
             if output:
                 players.append(output)
-                rewards["pot"] += output["grow"] * 2.5
-                #rewards["punish"] += output["punish"]
+                rewards["pot"] += output["grow"] * 3
                 rewards["eats"] += output["eat"]
+                rewards["reaps"] += output["reap"]
+                rewards["share"] += output["share"] * 1.5
             #Checking for the dominant cell name
             if not name_count.get(cell.name):
                 name_count[cell.name] = 1
@@ -97,27 +96,18 @@ class Animal:
                 name_count[cell.name] += 1
 
         self.offense = rewards["eats"]
+        rewards["pot"] -= rewards["share"]
+
         #compete content
-        punished_players = []
         for player in players:
             reward = (player["eat"]/rewards["eats"]) * rewards["pot"]
-            #fair_share = rewards["pot"]/len(players) *2
-            #rewards["fair"] = fair_share
-            #if reward > fair_share:
-            #    player["punished"] = 1
-            #    punished_players.append(player)
+            reward += (player["reap"]/rewards["reaps"]) * rewards["share"]
             player["cell"].energy += reward
             player["cell"].reward = reward
-
-        #for player in punished_players:
-        #    #*2 means double the energy put in
-        #    player["cell"].energy -= rewards["punish"]/len(punished_players) *2
-        #    player["cell"].punish = rewards["punish"]/len(punished_players) *2
 
         #kill content
         reduced_cells = []
         for cell in self.cells:
-            #cell.energy -= 2
             cell.energy -= 1
             if cell.energy > 0.0001:
                 reduced_cells.append(cell)
@@ -128,8 +118,7 @@ class Animal:
         control_cell = tools.cell_dict.get(tools.get_control_id())
         #If the controlled cells animal id is my id print my cells
         if control_cell and control_cell.animal.id == self.id:
-            print("reward " + str(rewards["pot"]))
-            #print("fair " + str(rewards["fair"]))
+            print("reward " + str(rewards["pot"]) + ", share " + str(rewards["share"]))
             for cell in self.cells:
                 print(cell)
         if name_count:
