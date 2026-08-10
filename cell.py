@@ -1,4 +1,5 @@
 from tools import tools
+from dna import dna
 import random
 import dna
 class Cell:
@@ -18,9 +19,9 @@ class Cell:
         for key, value in kwargs.items():
             setattr(self, key, value)
         if not hasattr(self, "name"):
-            self.name = dna.make_word()
+            self.name = dna.make_word(1)
         self.id = tools.unique_id()
-        tools.add_cell_dict(self)
+        tools.add_member("cells",self)
 
 
     def __str__(self):

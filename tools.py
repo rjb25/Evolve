@@ -7,7 +7,8 @@ class Tool:
         self.current_id = 1
         self.my_id = 1
         self.performance_run = 0
-        self.cell_dict = {}
+        #Some point this should be group dict where string is passed in to associate with group
+        self.group = {}
         self.my_cell_dict = {}
         self.animal_dict = {}
         self.my_animal_dict = {}
@@ -31,20 +32,23 @@ class Tool:
     def set_control_id(self,my_id):
         self.my_id = my_id
 
-    def add_cell_dict(self,cell):
-        self.cell_dict[cell.id] = cell
-        if cell.name == self.my_dna:
-            self.my_cell_dict[cell.id] = cell
+    def get_member(self,group,id):
+        return get_nested(self.group,[group,id])
 
-    def pop_cell_dict(self,cell):
-        del self.cell_dict[cell.id]
-        if cell.name == self.my_dna:
-            del self.my_cell_dict[cell.id]
+    def del_member(self,group,member):
+        del self.group[group][member.id]
+        if member.name == self.my_dna:
+            del self.group[group+"_mine"][member.id]
 
-    def add_animal_dict(self,animal):
-        self.animal_dict[animal.id] = animal
-    def pop_animal_dict(self,animal):
-        del self.animal_dict[animal.id]
+    def add_member(self,group,member):
+        set_nested(self.group, [group, member.id],member)
+        if member.name == self.my_dna:
+            set_nested(self.group, [group+"_mine", member.id],member)
+
+    def del_member(self,group,member):
+        del self.group[group][member.id]
+        if member.name == self.my_dna:
+            del self.group[group+"_mine"][member.id]
 
     def choice(self, options, probs):
         x = random.random()
@@ -110,4 +114,58 @@ class Tool:
         numbers.append(remaining_sum)
         return numbers
 
+def get_nested(data, keys):
+    for key in keys[:-1]:
+        if key not in data or not isinstance(data[key], dict):
+            return None
+        data = data[key]
+
+    return data.get(keys[-1])
+
+def set_nested(data, keys, value):
+    for key in keys[:-1]:
+        if key not in data or not isinstance(data[key], dict):
+            data[key] = {}
+        data = data[key]
+
+    data[keys[-1]] = value
+
+def try_nested(data, keys, value):
+    for key in keys[:-1]:
+        if key not in data or not isinstance(data[key], dict):
+            return
+        data = data[key]
+
+    data[keys[-1]] = value
+
+def append_nested(data, keys, value):
+    for key in keys[:-1]:
+        if key not in data or not isinstance(data[key], dict):
+            data[key] = {}
+        data = data[key]
+
+    if data.get(keys[-1]):
+        data[keys[-1]].append(value)
+    else:
+        data[keys[-1]] = [value]
+
+def extend_nested(data, keys, value):
+    for key in keys[:-1]:
+        if key not in data or not isinstance(data[key], dict):
+            data[key] = {}
+        data = data[key]
+
+    if data.get(keys[-1]):
+        data[keys[-1]].extend(value)
+    else:
+        data[keys[-1]] = value
+
 tools = Tool()
+
+class Shop:
+    def init(self):
+        self.inventory = {"options":[{"item":"sword", "damage":2, "cost":5}]}
+
+    def stock(self, item):
+        self.inventory["options"].append(item)
+

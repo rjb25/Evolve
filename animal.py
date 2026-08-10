@@ -16,14 +16,14 @@ class Animal:
             setattr(self, key, value)
         self.id = tools.unique_id()
         if not hasattr(self, "name"):
-            self.name = dna.make_word()
+            self.name = dna.make_word(6)
         if not self.cells:
             for i in range(self.start):
                 self.cells.append(Cell(**{"animal":self}))
         else:
             for cell in self.cells:
                 cell.animal = self
-        tools.add_animal_dict(self)
+        tools.add_member("animals",self)
 
     def __str__(self):
         return str(self.id) + " " + self.name + " " + str(len(self.cells)) + " " + self.action + " " + str(self.last_target)
@@ -112,10 +112,10 @@ class Animal:
             if cell.energy > 0.0001:
                 reduced_cells.append(cell)
             else:
-                tools.pop_cell_dict(cell)
+                tools.del_member("cells",cell)
         self.cells = reduced_cells
 
-        control_cell = tools.cell_dict.get(tools.get_control_id())
+        control_cell = tools.get_member("cells",tools.get_control_id())
         #If the controlled cells animal id is my id print my cells
         if control_cell and control_cell.animal.id == self.id:
             print("reward " + str(rewards["pot"]) + ", share " + str(rewards["share"]))

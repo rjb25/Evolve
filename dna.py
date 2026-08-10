@@ -17,31 +17,39 @@ import string
 import textdistance
 import math
 
-word_length = 6
-rule_count = 10
-functions = ["count","approach"]
-def make_rule():
-    return {"function":random.choice(functions)}
+class Dna:
+    def __init__(self):
+        self.my_dna = ""
+        self.rule_count = 10
+        self.functions = ["count", "approach"]
+        self.laws = {}
+        for letter in string.ascii_lowercase:
+            self.laws[letter] = [random.choice(string.ascii_lowercase)]
 
-def make_word():
-    the_word =""
-    for i in range(word_length):
-        random_letter = random.choice(string.ascii_lowercase)
-        the_word += random_letter
-    return the_word
+        self.rules = []
+        for i in range(self.rule_count):
+            self.rules.append(self.make_rule())
 
-word = make_word()
-print(word)
+    def make_creature(self, word):
+        creature = {}
+        creature["health"] = 0.1 + calculate(word, self.rules)
+        creature["damage"] = 0.1 + calculate(word, self.rules)
+        creature["dna"] = word
+        return creature
 
+    def make_rule(self):
+        return {"function": random.choice(self.functions)}
+    def make_laws(self):
+        return {"function": random.choice(self.functions)}
 
 def calculate(word, rules):
     useful = []
     sum = 0
     best_sum = 0
-    best_rule ={}
+    best_rule = {}
     for rule in rules:
         if not rule.get("to_word"):
-            rule["to_word"] = make_word()
+            rule["to_word"] = make_word(len(word))
         ruleout = evaluate(rule["function"], word, rule["to_word"])
         rule["output"] = ruleout
         if ruleout:
@@ -54,6 +62,15 @@ def calculate(word, rules):
     print(word)
     print(best_rule)
     return sum
+
+
+def make_word(length):
+    the_word = ""
+    for i in range(length):
+        random_letter = random.choice(string.ascii_lowercase)
+        the_word += random_letter
+    return the_word
+
 
 def letter_distance(char1,char2):
     char1 = char1.lower()
@@ -82,21 +99,4 @@ def evaluate(rule, word, to_word):
 
     return sum
 
-
-rules = []
-for i in range(rule_count):
-    rules.append(make_rule())
-
-health_rules = []
-damage_rules = []
-for i in range(rule_count):
-    health_rules.append(make_rule())
-    damage_rules.append(make_rule())
-
-def make_creature(word):
-    creature = {}
-    creature["health"] = 0.1+ calculate(word,health_rules)
-    creature["damage"] = 0.1+ calculate(word,damage_rules)
-    creature["dna"] = word
-    return creature
-
+dna = Dna()
