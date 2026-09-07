@@ -53,11 +53,11 @@ class Survivor:
         #Act till you have singularity
         if self.id == tools.get_control_id():
             try:
-                actionindex = int(input("Peasant action?"))
-                action = self.options[actionindex - 1]
+                actionindex = int(input("Survivor action? (number)"))
+                action = self.options[actionindex]
             except (ValueError, TypeError,IndexError):
-                actionindex = 1
-                action = self.options[actionindex - 1]
+                actionindex = 0
+                action = self.options[actionindex]
         else:
             action = tools.choice(self.options, self.weights)
 

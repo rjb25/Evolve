@@ -34,44 +34,47 @@ tools.set_control_id(int(message))
 runs = 80
 
 with cProfile.Profile() as profile:
-    survivors = []
-    for i in range(1):
-        survivor = Survivor()
-        survivors.append(survivor)
-        tools.add_member("survivors",survivor)
+    #SURVIVORS
+    #survivors = []
+    #for i in range(10):
+    #    survivor = Survivor()
+    #    survivors.append(survivor)
+    #    tools.add_member("survivors",survivor)
 
-    while runs:
-        #Check which is yours
-        alive = tools.get_member("survivors",tools.get_control_id())
-        if not alive and not tools.performance_run:
-            control_id = tools.get_new_id()
-            if control_id:
-                print("died. You are now: "+str(control_id))
-                tools.set_control_id(int(control_id))
-                confirm = input("confirm")
-            else:
-                message = input("DIED. control id?")
-                tools.set_control_id(int(message))
-                #print("game_over")
-                #runs = 0
+    #while runs:
+    #    print("survive")
+    #    #Check which is yours
+    #    alive = tools.get_member("survivors",tools.get_control_id())
+    #    if not alive and not tools.performance_run:
+    #        control_id = tools.get_new_id()
+    #        if control_id:
+    #            print("died. You are now: "+str(control_id))
+    #            tools.set_control_id(int(control_id))
+    #            confirm = input("confirm")
+    #        else:
+    #            message = input("DIED. control id?")
+    #            tools.set_control_id(int(message))
+    #            #print("game_over")
+    #            #runs = 0
 
-        #Main action
-        for survivor in survivors:
-            if survivor.health > 0:
-                survivor.act(survivors)
-                survivor.live()
+    #    #Main action
+    #    for survivor in survivors:
+    #        if survivor.health > 0:
+    #            survivor.act(survivors)
+    #            survivor.live()
 
-        #Remove dead
-        reduced = []
-        for survivor in survivors:
-            if survivor.health > 0:
-                reduced.append(survivor)
-            else:
-                tools.del_member("survivors",survivor)
-        survivors = reduced
-        for survivor in survivors:
-            print(survivor)
+    #    #Remove dead
+    #    reduced = []
+    #    for survivor in survivors:
+    #        if survivor.health > 0:
+    #            reduced.append(survivor)
+    #        else:
+    #            tools.del_member("survivors",survivor)
+    #    survivors = reduced
+    #    for survivor in survivors:
+    #        print(survivor)
 
+    #PEASANTS
     peasants = []
     for i in range(1):
         peasant = Survivor()
