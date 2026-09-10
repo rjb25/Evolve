@@ -16,69 +16,15 @@ from element import Element
 
 message = "" # Initialize message to an empty string
 count = 10
-animals = []
 
-def initiate():
-    global animals
-    global count
-    animals = []
-    for i in range(count):
-        animal = Animal(**{"team":"evil"})
-        animals.append(animal)
-
-#initiate()
-message = 0 #input("control id?")
+message = 4 #input("control id?")
 tools.set_control_id(int(message))
-#our_cell.energy += 50
-#tools.my_dna = our_cell.name
-runs = 80
+runs = 8000
 
 with cProfile.Profile() as profile:
-    #SURVIVORS
-    #survivors = []
-    #for i in range(10):
-    #    survivor = Survivor()
-    #    survivors.append(survivor)
-    #    tools.add_member("survivors",survivor)
-
-    #while runs:
-    #    print("survive")
-    #    #Check which is yours
-    #    alive = tools.get_member("survivors",tools.get_control_id())
-    #    if not alive and not tools.performance_run:
-    #        control_id = tools.get_new_id()
-    #        if control_id:
-    #            print("died. You are now: "+str(control_id))
-    #            tools.set_control_id(int(control_id))
-    #            confirm = input("confirm")
-    #        else:
-    #            message = input("DIED. control id?")
-    #            tools.set_control_id(int(message))
-    #            #print("game_over")
-    #            #runs = 0
-
-    #    #Main action
-    #    for survivor in survivors:
-    #        if survivor.health > 0:
-    #            survivor.act(survivors)
-    #            survivor.live()
-
-    #    #Remove dead
-    #    reduced = []
-    #    for survivor in survivors:
-    #        if survivor.health > 0:
-    #            reduced.append(survivor)
-    #        else:
-    #            tools.del_member("survivors",survivor)
-    #    survivors = reduced
-    #    for survivor in survivors:
-    #        print(survivor)
-
     #PEASANTS
-    peasants = []
-    for i in range(1):
+    for i in range(count):
         peasant = Survivor()
-        peasants.append(peasant)
         tools.add_member("peasants",peasant)
 
     while runs:
@@ -97,51 +43,28 @@ with cProfile.Profile() as profile:
                 #runs = 0
 
         #Main action
-        for peasant in peasants:
+        for peasant in tools.get_members("peasants"):
             if peasant.health > 0:
-                peasant.act(peasants)
                 peasant.live()
+                peasant.act()
 
         #Remove dead
         reduced = []
-        for peasant in peasants:
-            if peasant.health > 0:
+        for peasant in tools.get_members("peasants"):
+            if peasant.alive():
                 reduced.append(peasant)
             else:
                 tools.del_member("peasants",peasant)
         peasants = reduced
-        for peasant in peasants:
+
+        #Log
+        for peasant in tools.get_members("peasants"):
             print(peasant)
 
-
-    while runs:
-        animal_exists = tools.animal_dict.get(tools.get_control_id())
-        cell_exists = tools.cell_dict.get(tools.get_control_id())
-        if not animal_exists and not cell_exists and not tools.performance_run:
-            control_id = tools.get_new_id()
-            if control_id:
-                print("died. You are now: "+str(control_id))
-                tools.set_control_id(int(control_id))
-            else:
-                print("game_over")
-                runs = 0
-
-        for animal in animals:
-            animal.act(animals)
-
-        reduced_animals = []
-        for animal in animals:
-            if animal.cells:
-                reduced_animals.append(animal)
-            else:
-                tools.pop_animal_dict(animal)
-
-        animals = reduced_animals
-        if tools.animal_dict.get(tools.get_control_id()):
-            for animal in animals:
-                print(animal)
+        #Performance
         if tools.performance_run:
             runs -= 1
+
 results = pstats.Stats(profile)
 results.sort_stats(pstats.SortKey.TIME)
 results.print_stats()

@@ -35,6 +35,9 @@ class Tool:
     def get_member(self,group,id):
         return get_nested(self.group,[group,id])
 
+    def get_members(self,group):
+        return list(get_nested(self.group,[group]).values())
+
     def del_member(self,group,member):
         del self.group[group][member.id]
         if member.name == self.my_dna:
@@ -44,6 +47,12 @@ class Tool:
         set_nested(self.group, [group, member.id],member)
         if member.name == self.my_dna:
             set_nested(self.group, [group+"_mine", member.id],member)
+
+    #def add_relation(self,member,other_member):
+    #    append_nested(self.group, ["relations",member.id],member)
+    #    append_nested(self.group, ["relations",member.id],member)
+    #    if member.name == self.my_dna:
+    #        set_nested(self.group, [group+"_mine", member.id],member)
 
     def del_member(self,group,member):
         del self.group[group][member.id]
