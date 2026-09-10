@@ -1,10 +1,7 @@
 import cProfile
 import pstats
 from tools import tools
-from animal import Animal
-from peasant import Peasant
 from survivor import Survivor
-from element import Element
 #What do I want? I want infinite generation of meaning to allow a game to create a need for the player to modify their flow for a very long time.
 #I achieve this with many systems of interacting parts.
 #Systems are Object interactions, object unifications, object modifications.

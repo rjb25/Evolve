@@ -1,6 +1,5 @@
 import random
 import string
-import textdistance
 import math
 class Tool:
     def __init__(self):
