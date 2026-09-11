@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Evolution</title>
+  <base href="/Evolution/">
+</head>
+<body>
+  <h1>Evolution</h1>
+  <p id="health">loading health…</p>
+  <pre id="log"></pre>
+  <script>
+    const healthEl = document.getElementById("health");
+    const logEl = document.getElementById("log");
+    fetch("api/health")
+      .then((r) => r.json())
+      .then((h) => {
+        healthEl.textContent =
+          "ok=" + h.ok + " python=" + h.python +
+          " sessions=" + h.sessions + "/" + h.max_sessions;
+      })
+      .catch((e) => { healthEl.textContent = String(e); });
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/Evolution/ws${location.search}`);
+    ws.onmessage = (ev) => { logEl.textContent = ev.data; };
+    ws.onerror = () => { logEl.textContent = "ws error"; };
+  </script>
+</body>
+</html>
