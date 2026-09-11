@@ -14,6 +14,7 @@ class World:
     def __init__(self, population=10, seed=None, control_id=1, spectate_only=False):
         self.seed = seed
         self.population_cap = population
+        self.spectate_only = spectate_only
         self.rng = random.Random(seed)
         self.registry = Registry(rng=self.rng)
         self.dna = Dna(rng=self.rng)
@@ -148,13 +149,15 @@ class World:
         self.spectate_id = survivor_id
 
     def reset(self, seed: int | None = None, population: int = 10) -> None:
-        spectate_only = self.control_id is None and not self.pending_possess
+        next_event_id = self._next_event_id
+        spectate_only = self.spectate_only
         self.__init__(
             population=population,
             seed=seed,
             control_id=1,
             spectate_only=spectate_only,
         )
+        self._next_event_id = next_event_id
         self._emit(kind="reset")
 
     def snapshot(self) -> dict:

@@ -180,3 +180,29 @@ def test_reset_respawns():
     assert world.tick_index == 0
     assert len(world.survivors()) == 4
     assert any(e.kind == "reset" for e in world.events)
+    assert world.control_id is None
+    assert world.spectate_only is True
+
+
+def test_reset_after_extinction_reseats_player():
+    world = World(population=1, seed=0, control_id=1)
+    world.survivors()[0].health = 0
+    world.tick()
+    assert world.survivors() == []
+    assert world.control_id is None
+    assert world.pending_possess is False
+    world.reset(seed=0)
+    assert world.spectate_only is False
+    assert world.control_id == 1
+    assert world.snapshot()["clock"]["mode"] == "awaiting_player"
+    assert len(world.survivors()) == 10
+
+
+def test_reset_event_ids_continue():
+    world = World(population=1, seed=0, control_id=1)
+    world.tick(Command(action="produce"))
+    assert world.events[-1].event_id == 1
+    world.reset(seed=1)
+    events = world.snapshot()["events"]
+    assert [e["kind"] for e in events] == ["reset"]
+    assert events[0]["event_id"] == 2

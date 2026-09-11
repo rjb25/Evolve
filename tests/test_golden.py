@@ -67,6 +67,8 @@ def test_always_produce_three_tick_bag_pins_random_target_draw():
         world.tick()
         engine_bags.append(_engine_bag(world))
     assert engine_bags == frozen["bags"]
+    version, internal, gauss = world.rng.getstate()
+    assert [version, list(internal), gauss] == frozen["rng_state"]
 
 
 def test_two_seeded_worlds_match_after_fifty_npc_ticks():

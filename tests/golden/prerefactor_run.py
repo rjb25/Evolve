@@ -53,7 +53,7 @@ def main():
     ticks_done = 0
     for _ in range(max_ticks):
         members = tools.get_members("peasants")
-        if not always_produce and any(min_goods(s) == 0 for s in members):
+        if not always_produce and any(min_goods(s) <= 0 for s in members):
             break
         for peasant in members:
             if peasant.health > 0:
@@ -64,7 +64,11 @@ def main():
                 tools.del_member("peasants", peasant)
         ticks_done += 1
         bags.append(bag())
-    print(json.dumps({"ticks": ticks_done, "bags": bags}))
+    payload = {"ticks": ticks_done, "bags": bags}
+    if always_produce:
+        version, internal, gauss = random.getstate()
+        payload["rng_state"] = [version, list(internal), gauss]
+    print(json.dumps(payload))
 
 
 if __name__ == "__main__":
