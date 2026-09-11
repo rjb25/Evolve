@@ -5,6 +5,7 @@ import pytest
 from engine.world import World
 from server.protocol import (
     MAX_MESSAGE_BYTES,
+    MIN_TIMEOUT_MS,
     SPEED_MAX,
     SPEED_MIN,
     ActCommand,
@@ -96,6 +97,15 @@ def test_clock_timeout_zero_ok_negative_rejected():
     assert cmd.timeout_ms == 0
     with pytest.raises(ProtocolError):
         parse_message({"op": "clock", "timeout_ms": -1})
+
+
+def test_clock_timeout_positive_floor():
+    cmd = parse_message({"op": "clock", "timeout_ms": 1})
+    assert cmd.timeout_ms == MIN_TIMEOUT_MS
+    cmd = parse_message({"op": "clock", "timeout_ms": MIN_TIMEOUT_MS})
+    assert cmd.timeout_ms == MIN_TIMEOUT_MS
+    cmd = parse_message({"op": "clock", "timeout_ms": 15000})
+    assert cmd.timeout_ms == 15000
 
 
 def test_clock_invalid_mode():

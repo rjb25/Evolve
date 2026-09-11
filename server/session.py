@@ -290,28 +290,31 @@ class Session:
             await self._send_snapshot()
 
     async def _on_message(self, raw: str) -> None:
-        if len(raw.encode("utf-8")) > MAX_MESSAGE_BYTES:
-            await self._send_error("message_too_large", "max 8 KiB")
-            return
-        if not self._rate_ok():
-            await self._send_error("rate_limited", "max 20 messages per second")
-            return
-        try:
-            cmd = parse_message(raw)
-        except ProtocolError as exc:
-            await self._send_error(exc.error, exc.detail)
-            return
         async with self.lock:
+            oversize = len(raw.encode("utf-8")) > MAX_MESSAGE_BYTES
+            allowed = self._rate_ok()
+            if not allowed:
+                await self._send_error("rate_limited", "max 20 messages per second")
+                return
+            if oversize:
+                await self._send_error("message_too_large", "max 8 KiB")
+                return
+            try:
+                cmd = parse_message(raw)
+            except ProtocolError as exc:
+                await self._send_error(exc.error, exc.detail)
+                return
             await self._handle(cmd)
         self._wake.set()
 
     async def run(self) -> None:
         await self.ws.accept()
         self._arm_timeout()
-        self._clock_task = asyncio.create_task(self._clock_loop())
         log.info("session start sid=%s seed=%s", self.sid, self.world.seed)
         try:
-            await self._send_snapshot()
+            async with self.lock:
+                await self._send_snapshot()
+            self._clock_task = asyncio.create_task(self._clock_loop())
             while True:
                 raw = await self.ws.receive_text()
                 await self._on_message(raw)
@@ -352,16 +355,42 @@ def parse_ws_query(ws: WebSocket) -> tuple[int | None, bool]:
     return seed, spectate_only
 
 
+async def reject_websocket(ws: WebSocket, code: int) -> None:
+    await ws.accept()
+    await ws.close(code=code)
+
+
+async def snapshot_by_sid(sid: str | None) -> dict | None:
+    if not sid:
+        return None
+    async with _SESSIONS_LOCK:
+        sess = SESSIONS.get(sid)
+    if sess is None:
+        return None
+    async with sess.lock:
+        return sess.build_snapshot()
+
+
 async def run_session(ws: WebSocket) -> None:
+    async with _SESSIONS_LOCK:
+        at_cap = len(SESSIONS) >= MAX_SESSIONS
+    if at_cap:
+        await reject_websocket(ws, 1013)
+        return
     seed, spectate_only = parse_ws_query(ws)
     session = Session(ws, seed=seed, spectate_only=spectate_only)
     async with _SESSIONS_LOCK:
         if len(SESSIONS) >= MAX_SESSIONS:
-            await ws.close(code=1013)
-            return
-        SESSIONS[session.sid] = session
+            registered = False
+        else:
+            SESSIONS[session.sid] = session
+            registered = True
+    if not registered:
+        await reject_websocket(ws, 1013)
+        return
     try:
         await session.run()
     finally:
         await session.shutdown()
-        SESSIONS.pop(session.sid, None)
+        async with _SESSIONS_LOCK:
+            SESSIONS.pop(session.sid, None)

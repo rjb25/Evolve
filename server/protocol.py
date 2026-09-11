@@ -16,6 +16,7 @@ from pydantic import (
 MAX_MESSAGE_BYTES = 8 * 1024
 SPEED_MIN = 0.5
 SPEED_MAX = 20.0
+MIN_TIMEOUT_MS = 250
 OPS = frozenset({"act", "possess", "release", "spectate", "clock", "reset", "ping"})
 
 
@@ -68,9 +69,13 @@ class ClockCommand(BaseModel):
     @field_validator("timeout_ms")
     @classmethod
     def timeout_non_negative(cls, value: int | None) -> int | None:
-        if value is not None and value < 0:
+        if value is None:
+            return value
+        if value < 0:
             raise ValueError("timeout_ms must be >= 0")
-        return value
+        if value == 0:
+            return 0
+        return max(MIN_TIMEOUT_MS, value)
 
 
 class ResetCommand(BaseModel):
