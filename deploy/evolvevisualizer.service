@@ -1,0 +1,28 @@
+[Unit]
+Description=Evolve Visualizer (FastAPI / uvicorn)
+After=network.target
+
+[Service]
+# Copy to /etc/systemd/system/evolvevisualizer.service, then:
+#   systemctl daemon-reload && systemctl enable --now evolvevisualizer
+#
+# Create the venv on the host with:
+#   /usr/bin/python3.11 -m venv .venv
+#   .venv/bin/pip install -r requirements.txt
+# Never shebang python3: /usr/bin/python3 is 3.6.8 here and pyproject.toml
+# requires >=3.10. If 3.11 is missing, this unit must fail loud rather than
+# silently hitting 3.6.
+#
+# Bind 127.0.0.1 only — TLS terminates at nginx.
+# --ws-max-size 8192 matches MAX_MESSAGE_BYTES (8 KiB) in server/protocol.py
+# so oversized frames are rejected before receive_text.
+#
+# WorkingDirectory is required so relative artifacts land somewhere sane.
+# WEB_ROOT is derived from Path(__file__), so a wrong CWD still finds web/.
+Type=simple
+WorkingDirectory=/opt/evolvevisualizer
+ExecStart=/opt/evolvevisualizer/.venv/bin/python -m uvicorn server.app:app --host 127.0.0.1 --port 8765 --ws-max-size 8192
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
