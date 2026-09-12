@@ -3,10 +3,10 @@ from dna import dna
 import random
 import dna
 import string
-#I have a good interaction system. But I need a good unifying anc creation system.
-#Add a peasant every round
-#Allow peasants to insure, which means that they join a group who share damage and share reward. Same for knights.
-#You have a social coordinate, target etc, rest (heal,  craft), and an attack action attack, grow.
+#Produce, discover, negotiate
+#Strength, flexibility, control
+#Nature, philosophy, fighting
+#Do, consider, reap
 class Survivor:
     def __init__(self,**kwargs):
         self.action = "none"
@@ -15,9 +15,9 @@ class Survivor:
         self.water = 20
         self.fiber = 20
         self.isplayer = 0
-        #self.information = 1
-        #self.negotiation = 1
-        self.trade = ["meat","water","fiber"]#,"information","negotiation"]
+        self.x = 0
+        self.y = 0
+        self.trade = ["meat","water","fiber"]
         self.produce = random.choice(["meat","water","fiber"])
         self.options = ["produce","deal","relate"]
         self.weights = tools.make_weights(len(self.options))
@@ -32,7 +32,7 @@ class Survivor:
 
     def __str__(self):
         #Need a print tool
-        out_string = str(self.id) + " " + self.name + " Health:" + str(self.health) + " Goods: m" + str(self.meat) + " w" + str(self.water) + " f" + str(self.fiber) + " Do:" + self.action #+" Information:" + str(self.information) + " Negotiation:"+str(self.negotiation)
+        out_string = str(self.id) + " " + self.name + " Health:" + str(self.health) + " Goods: m" + str(self.meat) + " w" + str(self.water) + " f" + str(self.fiber) + " Do:" + self.action 
         if self.isplayer:
             out_string = out_string + " ME"
         return out_string
