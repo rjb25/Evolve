@@ -4,26 +4,40 @@
   <meta charset="utf-8">
   <title>Evolution</title>
   <base href="/Evolution/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="static/css/app.css">
+  <script type="module" src="static/js/app.js"></script>
 </head>
 <body>
-  <h1>Evolution</h1>
-  <p id="health">loading health…</p>
-  <pre id="log"></pre>
-  <script>
-    const healthEl = document.getElementById("health");
-    const logEl = document.getElementById("log");
-    fetch("api/health")
-      .then((r) => r.json())
-      .then((h) => {
-        healthEl.textContent =
-          "ok=" + h.ok + " python=" + h.python +
-          " sessions=" + h.sessions + "/" + h.max_sessions;
-      })
-      .catch((e) => { healthEl.textContent = String(e); });
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/Evolution/ws${location.search}`);
-    ws.onmessage = (ev) => { logEl.textContent = ev.data; };
-    ws.onerror = () => { logEl.textContent = "ws error"; };
-  </script>
+  <header class="chrome">
+    <h1>EVOLUTION</h1>
+    <div class="clock" role="group" aria-label="Tick controls">
+      <button type="button" id="btn-playpause">Pause</button>
+      <button type="button" id="btn-step">Step</button>
+      <div class="speeds" id="speeds" role="group" aria-label="Speed">
+        <button type="button" data-speed="0.5">0.5x</button>
+        <button type="button" data-speed="1">1x</button>
+        <button type="button" data-speed="2">2x</button>
+        <button type="button" data-speed="5">5x</button>
+        <button type="button" data-speed="10">10x</button>
+      </div>
+      <label class="timeout">
+        Await
+        <span id="timeout-remaining">—</span>
+        <input id="timeout-s" type="number" min="0" step="1" value="15" title="Timeout seconds. 0 waits forever.">
+        s
+      </label>
+    </div>
+    <div class="meta">
+      <span id="alive">Alive —/10</span>
+      <span id="tick">Tick —</span>
+    </div>
+  </header>
+  <main class="stage">
+    <section id="board" class="board" aria-label="Population"></section>
+    <aside id="panel" class="panel" aria-label="You or Spectate"></aside>
+  </main>
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="error" class="toast hidden" role="alert"></div>
 </body>
 </html>
