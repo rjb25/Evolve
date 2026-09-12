@@ -432,6 +432,151 @@ input[type="number"] {
   border: 1px solid var(--danger);
 }
 
+.graph-wrap,
+.log-wrap {
+  padding: 0 16px 16px;
+}
+
+.graph-wrap h2,
+.log-wrap h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+}
+
+.graph {
+  display: block;
+  width: 100%;
+  height: 280px;
+  background: var(--bg-tile);
+  border: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
+}
+
+.g-edge {
+  stroke: #4a5866;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.g-edge.pulse {
+  stroke: var(--you);
+  stroke-width: 2.5;
+  animation: g-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes g-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.g-node {
+  cursor: pointer;
+}
+
+.g-node .g-body {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.g-node.you .g-body {
+  stroke: var(--you);
+  stroke-width: 2.5;
+}
+
+.g-node.watch .g-body {
+  stroke: var(--watch);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.g-node.valid .g-body {
+  stroke: var(--ok);
+}
+
+.g-node.selected .g-body {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.graph.is-targeting .g-node:not(.valid):not(.you):not(.watch) {
+  opacity: 0.45;
+}
+
+.g-node:focus {
+  outline: none;
+}
+
+.g-node:focus .g-body {
+  stroke: var(--accent);
+}
+
+.g-letter,
+.g-label,
+.g-empty {
+  font-family: inherit;
+  pointer-events: none;
+}
+
+.g-letter {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.g-label {
+  fill: var(--ink);
+  font-size: 10px;
+  text-transform: lowercase;
+}
+
+.g-empty {
+  fill: var(--muted);
+  font-size: 13px;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+
+.log li {
+  display: grid;
+  grid-template-columns: 4.5em 1fr;
+  gap: 10px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.log li:last-child {
+  border-bottom: 0;
+}
+
+.log .tick {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log [data-kind="death"] .msg {
+  color: var(--danger);
+}
+
+.log [data-kind="reset"] .msg {
+  color: var(--you);
+}
+
 @media (max-width: 840px) {
   .stage {
     grid-template-columns: 1fr;

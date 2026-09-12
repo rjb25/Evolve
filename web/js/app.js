@@ -1,4 +1,6 @@
 import { renderBoard } from "./board.js";
+import { renderGraph } from "./graph.js";
+import { renderLog } from "./log.js";
 import { connect } from "./protocol.js";
 import {
   escapeHtml,
@@ -27,6 +29,8 @@ const els = {
   timeoutS: document.getElementById("timeout-s"),
   alive: document.getElementById("alive"),
   tick: document.getElementById("tick"),
+  graph: document.getElementById("graph"),
+  log: document.getElementById("log"),
 };
 
 let snapshot = null;
@@ -348,6 +352,20 @@ function render() {
   }
   renderPanel();
   renderBanner();
+  renderGraph(
+    els.graph,
+    snapshot,
+    snapshot
+      ? {
+          mode: targeting,
+          selectedId,
+          youId: snapshot.control_id ?? null,
+          watchId: snapshot.spectate_id ?? null,
+        }
+      : {},
+    handleSurvivorClick
+  );
+  renderLog(els.log, snapshot);
 }
 
 function showError(frame) {
