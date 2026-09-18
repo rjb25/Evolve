@@ -27,6 +27,12 @@ def test_lobbies_empty(client):
 
 def test_create_lobby_requires_origin(client):
     assert client.post("/Evolution/api/lobbies", json={}).status_code == 403
+    ok = client.post(
+        "/Evolution/api/lobbies",
+        json={},
+        headers={"Origin": "https://roleplaycardgame.com"},
+    )
+    assert ok.status_code == 200
 
 
 def test_create_lobby_and_list(client):

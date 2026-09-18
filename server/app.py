@@ -60,10 +60,22 @@ def lobbies():
     return {"lobbies": session_mod.list_lobbies()}
 
 
+def _post_origin_ok(request: Request) -> bool:
+    origin = request.headers.get("origin")
+    if origin in session_mod.ALLOWED_WS_ORIGINS:
+        return True
+    # Same-host POST (some browsers/proxies omit Origin).
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    return origin in (None, "") and host in {
+        "roleplaycardgame.com",
+        "127.0.0.1",
+        "localhost",
+    }
+
+
 @_app.post("/Evolution/api/lobbies")
 async def create_lobby(request: Request):
-    origin = request.headers.get("origin")
-    if origin not in session_mod.ALLOWED_WS_ORIGINS:
+    if not _post_origin_ok(request):
         return JSONResponse({"error": "origin"}, status_code=403)
     body = {}
     try:

@@ -426,8 +426,10 @@ input[type="number"] {
 
 .banner.hidden,
 .toast.hidden,
-.hidden {
-  display: none;
+.hidden,
+.play-view.hidden,
+.lobby-view.hidden {
+  display: none !important;
 }
 
 .toast {

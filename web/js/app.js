@@ -491,10 +491,11 @@ function startLobby() {
   els.playView.classList.add("hidden");
   refreshLobbies();
   setInterval(refreshLobbies, 2000);
-  els.newGame.addEventListener("click", () => {
-    newGame().catch((err) => showLobbyError(String(err)));
-  });
-  els.lobbyRows.addEventListener("click", (ev) => {
+  els.lobbyView.addEventListener("click", (ev) => {
+    if (ev.target.closest("#btn-new-game")) {
+      newGame().catch((err) => showLobbyError(String(err)));
+      return;
+    }
     const btn = ev.target.closest("[data-join]");
     if (!btn) return;
     location.search = `?lobby=${encodeURIComponent(btn.dataset.join)}`;
