@@ -105,6 +105,20 @@ def test_guest_clock_rejected(client):
             assert later["tick"] == 0
 
 
+def test_reconnect_same_lobby(client):
+    with _ws(client) as host:
+        first = host.receive_json()
+        lobby_id = first["lobby_id"]
+        host.send_json({"op": "act", "action": "produce"})
+        after = host.receive_json()
+        assert after["tick"] == 1
+    with _ws(client, f"/Evolution/ws?lobby={lobby_id}") as again:
+        snap = again.receive_json()
+        assert snap["v"] == 1
+        assert snap["lobby_id"] == lobby_id
+        assert snap["control_id"] is not None
+
+
 def test_session_count_two_sockets_one_lobby(client):
     with _ws(client) as host:
         first = host.receive_json()

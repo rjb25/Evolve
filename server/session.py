@@ -37,7 +37,7 @@ MAX_MSG_PER_SEC = 20
 DEFAULT_TIMEOUT_MS = 15000
 DEFAULT_SPEED = 1.0
 HEARTBEAT_S = 1.0
-EMPTY_GRACE_S = 5.0
+EMPTY_GRACE_S = 60.0
 
 log = logging.getLogger("evolvevisualizer.session")
 
@@ -125,8 +125,12 @@ class Lobby:
 
     async def broadcast(self) -> None:
         for client in list(self.clients.values()):
-            if not client._closed:
+            if client._closed:
+                continue
+            try:
                 await client._send_snapshot()
+            except Exception:
+                client._closed = True
 
     async def maybe_tick(self) -> None:
         seats = self.living_seats()
@@ -233,15 +237,25 @@ class Lobby:
                     continue
                 except asyncio.TimeoutError:
                     pass
+                drop = False
                 async with self.lock:
                     if self._closed:
                         return
                     if self._empty_since is not None:
                         if time.monotonic() - self._empty_since >= EMPTY_GRACE_S:
-                            await self.shutdown()
-                            async with _SESSIONS_LOCK:
-                                LOBBIES.pop(self.id, None)
-                            return
+                            self._closed = True
+                            drop = True
+                        else:
+                            continue
+                if drop:
+                    async with _SESSIONS_LOCK:
+                        if LOBBIES.get(self.id) is self:
+                            LOBBIES.pop(self.id, None)
+                    return
+                async with self.lock:
+                    if self._closed:
+                        return
+                    if self._empty_since is not None:
                         continue
                     mode = "watching"
                     if self.living_seats():
@@ -283,12 +297,14 @@ class Lobby:
         self._wake.set()
         task = self._clock_task
         self._clock_task = None
-        if task is not None:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        current = asyncio.current_task()
+        if task is None or task is current:
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 class Session:
@@ -685,8 +701,11 @@ async def run_session(ws: WebSocket) -> None:
         if lobby_id:
             lobby = LOBBIES.get(lobby_id)
             if lobby is None or lobby._closed:
-                await reject_websocket(ws, 1013)
-                return
+                if len(LOBBIES) >= MAX_SESSIONS:
+                    await reject_websocket(ws, 1013)
+                    return
+                lobby = Lobby(lobby_id, seed=seed, spectate_only=spectate_only)
+                LOBBIES[lobby_id] = lobby
         else:
             if len(LOBBIES) >= MAX_SESSIONS:
                 await reject_websocket(ws, 1013)

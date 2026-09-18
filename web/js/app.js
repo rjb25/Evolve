@@ -1,7 +1,7 @@
 import { renderBoard } from "./board.js";
 import { renderGraph } from "./graph.js";
 import { renderLog } from "./log.js";
-import { connect } from "./protocol.js";
+import { connect, deriveWsUrl } from "./protocol.js";
 import {
   escapeHtml,
   floor0,
@@ -10,9 +10,6 @@ import {
   isValidTarget,
   renderGlyph,
 } from "./board.js";
-
-const proto = location.protocol === "https:" ? "wss" : "ws";
-const wsUrl = `${proto}://${location.host}/Evolution/ws${location.search}`;
 
 const SPEEDS = [0.5, 1, 2, 5, 10];
 const POP_CAP = 10;
@@ -505,13 +502,38 @@ function startLobby() {
 function startPlay() {
   els.lobbyView.classList.add("hidden");
   els.playView.classList.remove("hidden");
-  const client = connect({
-    url: wsUrl,
-    onSnapshot,
-    onError,
-    onClose,
-  });
-  send = client.send;
+  let playClient = null;
+  let retries = 0;
+  function bind() {
+    if (playClient) {
+      playClient.close();
+    }
+    playClient = connect({
+      url: deriveWsUrl(),
+      onSnapshot: (next) => {
+        retries = 0;
+        onSnapshot(next);
+        if (next && next.lobby_id) {
+          const q = new URLSearchParams(location.search);
+          if (q.get("lobby") !== next.lobby_id) {
+            q.set("lobby", next.lobby_id);
+            history.replaceState(null, "", `${location.pathname}?${q}`);
+          }
+        }
+      },
+      onError,
+      onClose: (ev) => {
+        onClose(ev);
+        snapshot = null;
+        render();
+        const delay = Math.min(8000, 400 * 2 ** retries);
+        retries += 1;
+        setTimeout(bind, delay);
+      },
+    });
+    send = playClient.send;
+  }
+  bind();
 }
 
 const params = new URLSearchParams(location.search);

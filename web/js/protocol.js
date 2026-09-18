@@ -1,4 +1,4 @@
-function deriveWsUrl() {
+export function deriveWsUrl() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${location.host}/Evolution/ws${location.search}`;
 }
