@@ -125,3 +125,37 @@ def test_session_count_two_sockets_one_lobby(client):
             listed = client.get("/Evolution/api/lobbies").json()["lobbies"]
             assert len(listed) == 1
             assert listed[0]["humans"] == 2
+
+
+def test_solfray_lobby_hidden_from_public_list(client):
+    sf_id = "sf-deadbeefcafebabe"
+    created = client.post("/Evolution/api/lobbies", json={"seed": 3}, headers=ORIGIN)
+    assert created.status_code == 200
+    normal_id = created.json()["id"]
+    assert not normal_id.startswith("sf-")
+    with _ws(client, f"/Evolution/ws?lobby={sf_id}") as sf_ws:
+        snap = sf_ws.receive_json()
+        assert snap["v"] == 1
+        assert snap["lobby_id"] == sf_id
+        assert snap["control_id"] is not None
+        assert sf_id in LOBBIES
+        with _ws(client, f"/Evolution/ws?lobby={normal_id}") as normal_ws:
+            normal_ws.receive_json()
+            listed = client.get("/Evolution/api/lobbies").json()["lobbies"]
+            ids = [row["id"] for row in listed]
+            assert normal_id in ids
+            assert sf_id not in ids
+            assert all(not row["id"].startswith("sf-") for row in listed)
+
+
+def test_solfray_lobby_revive_skips_create(client):
+    sf_id = "sf-cafebabedeadbeef"
+    assert sf_id not in LOBBIES
+    before = client.get("/Evolution/api/lobbies").json()["lobbies"]
+    with _ws(client, f"/Evolution/ws?lobby={sf_id}") as ws:
+        snap = ws.receive_json()
+        assert snap["lobby_id"] == sf_id
+        assert sf_id in LOBBIES
+        listed = client.get("/Evolution/api/lobbies").json()["lobbies"]
+        assert all(row["id"] != sf_id for row in listed)
+        assert listed == before

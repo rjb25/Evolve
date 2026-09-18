@@ -2,6 +2,7 @@ import { renderBoard } from "./board.js";
 import { renderGraph } from "./graph.js";
 import { renderLog } from "./log.js";
 import { connect, deriveWsUrl } from "./protocol.js";
+import { VERSION, bootHosted } from "./solfray.js";
 import {
   escapeHtml,
   floor0,
@@ -552,12 +553,29 @@ function startPlay() {
   bind();
 }
 
-const params = new URLSearchParams(location.search);
-if (params.get("lobby")) {
-  startPlay();
-} else {
-  startLobby();
+function bootBare() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("lobby")) startPlay();
+  else startLobby();
 }
+
+async function boot() {
+  const framed = window.parent !== window;
+  if (!framed || !window.Solfray) {
+    bootBare();
+    return;
+  }
+  els.lobbyView.classList.add("hidden");
+  const sf = await window.Solfray.connect({ version: VERSION });
+  if (!sf.hosted) {
+    bootBare();
+    return;
+  }
+  await bootHosted(sf);
+  startPlay();
+}
+
+boot();
 
 els.playpause.addEventListener("click", () => {
   const paused = snapshot?.clock?.mode === "pause";

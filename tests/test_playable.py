@@ -86,3 +86,34 @@ def test_static_css_skips_framing_headers(client):
     assert "text/css" in response.headers["content-type"]
     assert "content-security-policy" not in response.headers
     assert "no-cache" not in response.headers.get("cache-control", "")
+
+
+def test_index_loads_classic_sdk_before_app(client):
+    html = client.get("/Evolution/").text
+    sdk = 'src="https://solfray.com/solfray-playable.js"'
+    app_src = 'src="static/js/app.js"'
+    sdk_at = html.find(sdk)
+    app_at = html.find(app_src)
+    assert sdk_at != -1
+    assert app_at != -1
+    assert sdk_at < app_at
+    tag_start = html.rfind("<script", 0, sdk_at)
+    sdk_tag = html[tag_start:html.find("</script>", sdk_at)]
+    assert "type=\"module\"" not in sdk_tag
+    app_tag_start = html.rfind("<script", 0, app_at)
+    app_tag = html[app_tag_start:html.find("</script>", app_at)]
+    assert "type=\"module\"" in app_tag
+
+
+def test_solfray_boot_helpers_match_manifest():
+    manifest = (WEB_ROOT / "solfray-playable.json").read_text()
+    boot = (WEB_ROOT / "js" / "solfray.js").read_text()
+    app_js = (WEB_ROOT / "js" / "app.js").read_text()
+    assert '"version": "1.0.0"' in manifest
+    assert 'export const VERSION = "1.0.0"' in boot
+    assert "SHA-256" in boot
+    assert "sf-${slug}" in boot or "sf-" in boot
+    assert "window.parent !== window" in app_js
+    assert "Solfray.connect" in app_js
+    assert "bootBare" in app_js
+    assert "bootHosted" in app_js

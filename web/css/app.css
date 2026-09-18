@@ -633,3 +633,9 @@ input[type="number"] {
     position: static;
   }
 }
+
+@media (max-width: 360px), (max-height: 280px) {
+  .chrome {
+    position: static;
+  }
+}

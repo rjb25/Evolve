@@ -654,6 +654,8 @@ def list_lobbies() -> list[dict]:
     for lobby in LOBBIES.values():
         if not lobby.clients:
             continue
+        if lobby.id.startswith("sf-"):
+            continue
         rows.append(lobby.summary())
     rows.sort(key=lambda row: row["tick"], reverse=True)
     return rows
