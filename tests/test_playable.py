@@ -113,6 +113,8 @@ def test_solfray_boot_helpers_match_manifest():
     assert 'export const VERSION = "1.0.0"' in boot
     assert "SHA-256" in boot
     assert "sf-${slug}" in boot or "sf-" in boot
+    assert "fetch" not in boot
+    assert "api/lobbies" not in boot
     assert "window.parent !== window" in app_js
     assert "Solfray.connect" in app_js
     assert "bootBare" in app_js

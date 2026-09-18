@@ -565,14 +565,18 @@ async function boot() {
     bootBare();
     return;
   }
-  els.lobbyView.classList.add("hidden");
-  const sf = await window.Solfray.connect({ version: VERSION });
-  if (!sf.hosted) {
+  try {
+    els.lobbyView.classList.add("hidden");
+    const sf = await window.Solfray.connect({ version: VERSION });
+    if (!sf || !sf.hosted) {
+      bootBare();
+      return;
+    }
+    await bootHosted(sf);
+    startPlay();
+  } catch {
     bootBare();
-    return;
   }
-  await bootHosted(sf);
-  startPlay();
 }
 
 boot();
