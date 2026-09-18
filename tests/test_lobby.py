@@ -79,15 +79,12 @@ def test_two_players_barrier(client):
             assert guest_done["tick"] == 1
 
 
-def test_join_unknown_lobby_1013(client):
-    from starlette.websockets import WebSocketDisconnect
-
-    with client.websocket_connect(
-        "/Evolution/ws?lobby=nopexxxx", headers=ORIGIN
-    ) as ws:
-        with pytest.raises(WebSocketDisconnect) as raised:
-            ws.receive_json()
-        assert raised.value.code == 1013
+def test_join_unknown_lobby_creates_it(client):
+    with _ws(client, "/Evolution/ws?lobby=nopexxxx") as ws:
+        snap = ws.receive_json()
+        assert snap["v"] == 1
+        assert snap["lobby_id"] == "nopexxxx"
+        assert snap["control_id"] is not None
 
 
 def test_guest_clock_rejected(client):
