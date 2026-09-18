@@ -29,7 +29,7 @@ Type=simple
 User=evolvevisualizer
 Group=evolvevisualizer
 WorkingDirectory=/opt/evolvevisualizer
-ExecStart=/opt/evolvevisualizer/.venv/bin/python -m uvicorn server.app:app --host 127.0.0.1 --port 8765 --ws-max-size 8192
+ExecStart=/opt/evolvevisualizer/.venv/bin/python -m uvicorn server.app:app --host 127.0.0.1 --port 8767 --ws-max-size 8192
 Restart=on-failure
 
 [Install]

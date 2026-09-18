@@ -29,8 +29,8 @@ location /Evolution/ {
     proxy_set_header Host $host;
     proxy_set_header Origin $http_origin;
     proxy_read_timeout 3600s;   # awaiting_player can sit past default 60s
-    add_header Content-Security-Policy "frame-ancestors https://solfray.com" always;
-    add_header Cache-Control "no-cache" always;
+    # CSP/no-cache come from the app (HTML/JSON only). add_header here
+    # would also hit /static and the WebSocket upgrade.
 }
 location = /Evolution {
     # $is_args$args keeps ?seed= / ?spectate=1; bare return 302 /Evolution/;

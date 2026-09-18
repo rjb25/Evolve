@@ -85,3 +85,4 @@ def test_static_css_skips_framing_headers(client):
     assert response.status_code == 200
     assert "text/css" in response.headers["content-type"]
     assert "content-security-policy" not in response.headers
+    assert "no-cache" not in response.headers.get("cache-control", "")
