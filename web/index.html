@@ -9,43 +9,73 @@
   <script type="module" src="static/js/app.js"></script>
 </head>
 <body>
-  <header class="chrome">
-    <h1>EVOLUTION</h1>
-    <div class="clock" role="group" aria-label="Tick controls">
-      <button type="button" id="btn-playpause">Pause</button>
-      <button type="button" id="btn-step">Step</button>
-      <div class="speeds" id="speeds" role="group" aria-label="Speed">
-        <button type="button" data-speed="0.5">0.5x</button>
-        <button type="button" data-speed="1">1x</button>
-        <button type="button" data-speed="2">2x</button>
-        <button type="button" data-speed="5">5x</button>
-        <button type="button" data-speed="10">10x</button>
+  <div id="lobby-view" class="lobby-view">
+    <header class="chrome">
+      <h1>EVOLUTION</h1>
+    </header>
+    <section class="lobby-panel">
+      <p class="sub">Single player by default. Others can join a running game and take a random survivor.</p>
+      <div class="lobby-actions">
+        <button type="button" id="btn-new-game">New game</button>
+        <label>seed <input id="lobby-seed" type="number" min="0" step="1" placeholder="random"></label>
       </div>
-      <label class="timeout">
-        Await
-        <span id="timeout-remaining">—</span>
-        <input id="timeout-s" type="number" min="0" step="1" value="15" title="Timeout seconds. 0 waits forever.">
-        s
-      </label>
-    </div>
-    <div class="meta">
-      <span id="alive">Alive —/10</span>
-      <span id="tick">Tick —</span>
-    </div>
-  </header>
-  <main class="stage">
-    <section id="board" class="board" aria-label="Population"></section>
-    <aside id="panel" class="panel" aria-label="You or Spectate"></aside>
-  </main>
-  <section class="graph-wrap" aria-label="Relation graph">
-    <h2>RELATIONS</h2>
-    <svg id="graph" class="graph" role="group" aria-label="Living relations"></svg>
-  </section>
-  <section class="log-wrap" aria-label="Event log">
-    <h2>LOG</h2>
-    <ol id="log" class="log"></ol>
-  </section>
-  <div id="banner" class="banner hidden" role="status"></div>
-  <div id="error" class="toast hidden" role="alert"></div>
+      <p id="lobby-error" class="toast hidden" role="alert"></p>
+      <h2>LOBBIES</h2>
+      <div id="lobby-empty" class="sub">No games. You are player one.</div>
+      <table id="lobby-table" class="lobby-table hidden">
+        <thead>
+          <tr>
+            <th>Host</th>
+            <th>Humans</th>
+            <th>Alive</th>
+            <th>Tick</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="lobby-rows"></tbody>
+      </table>
+    </section>
+  </div>
+  <div id="play-view" class="play-view hidden">
+    <header class="chrome">
+      <h1>EVOLUTION</h1>
+      <div class="clock" role="group" aria-label="Tick controls">
+        <button type="button" id="btn-playpause">Pause</button>
+        <button type="button" id="btn-step">Step</button>
+        <div class="speeds" id="speeds" role="group" aria-label="Speed">
+          <button type="button" data-speed="0.5">0.5x</button>
+          <button type="button" data-speed="1">1x</button>
+          <button type="button" data-speed="2">2x</button>
+          <button type="button" data-speed="5">5x</button>
+          <button type="button" data-speed="10">10x</button>
+        </div>
+        <label class="timeout">
+          Await
+          <span id="timeout-remaining">—</span>
+          <input id="timeout-s" type="number" min="0" step="1" value="15" title="Timeout seconds. 0 waits forever.">
+          s
+        </label>
+      </div>
+      <div class="meta">
+        <span id="humans">Humans —</span>
+        <span id="alive">Alive —/10</span>
+        <span id="tick">Tick —</span>
+      </div>
+    </header>
+    <main class="stage">
+      <section id="board" class="board" aria-label="Population"></section>
+      <aside id="panel" class="panel" aria-label="You or Spectate"></aside>
+    </main>
+    <section class="graph-wrap" aria-label="Relation graph">
+      <h2>RELATIONS</h2>
+      <svg id="graph" class="graph" role="group" aria-label="Living relations"></svg>
+    </section>
+    <section class="log-wrap" aria-label="Event log">
+      <h2>LOG</h2>
+      <ol id="log" class="log"></ol>
+    </section>
+    <div id="banner" class="banner hidden" role="status"></div>
+    <div id="error" class="toast hidden" role="alert"></div>
+  </div>
 </body>
 </html>

@@ -82,13 +82,17 @@ export function isValidTarget(survivor, snapshot, mode, youId) {
 function tileHtml(row, snapshot, view) {
   const { mode, selectedId, youId, watchId } = view;
   const classes = ["tile"];
+  const humans = view.humans || [];
   if (youId != null && row.id === youId) classes.push("you");
+  else if (humans.includes(row.id)) classes.push("human");
   else if (watchId != null && row.id === watchId) classes.push("watch");
   if (isValidTarget(row, snapshot, mode, youId)) classes.push("valid");
   if (selectedId != null && row.id === selectedId) classes.push("selected");
   const badges = [];
   if (youId != null && row.id === youId) {
     badges.push(`<span class="badge you">YOU</span>`);
+  } else if (humans.includes(row.id)) {
+    badges.push(`<span class="badge human">P</span>`);
   } else if (watchId != null && row.id === watchId) {
     badges.push(`<span class="badge watch">WATCH</span>`);
   }

@@ -28,9 +28,18 @@ const els = {
   timeoutRemaining: document.getElementById("timeout-remaining"),
   timeoutS: document.getElementById("timeout-s"),
   alive: document.getElementById("alive"),
+  humans: document.getElementById("humans"),
   tick: document.getElementById("tick"),
   graph: document.getElementById("graph"),
   log: document.getElementById("log"),
+  lobbyView: document.getElementById("lobby-view"),
+  playView: document.getElementById("play-view"),
+  lobbyRows: document.getElementById("lobby-rows"),
+  lobbyTable: document.getElementById("lobby-table"),
+  lobbyEmpty: document.getElementById("lobby-empty"),
+  lobbyError: document.getElementById("lobby-error"),
+  newGame: document.getElementById("btn-new-game"),
+  lobbySeed: document.getElementById("lobby-seed"),
 };
 
 let snapshot = null;
@@ -51,6 +60,7 @@ function pickSuccessor(survivors) {
   let best = null;
   for (const row of survivors || []) {
     if (!row || !row.alive) continue;
+    if ((snapshot?.humans || []).includes(row.id)) continue;
     if (
       best == null ||
       row.health > best.health ||
@@ -89,7 +99,16 @@ function stepEnabled(snap) {
 }
 
 function actsEnabled(snap) {
-  return snap?.clock?.mode === "awaiting_player" && snap.control_id != null;
+  if (snap?.clock?.mode !== "awaiting_player" || snap.control_id == null) {
+    return false;
+  }
+  const waiting = snap.waiting || [];
+  if (waiting.length && !waiting.includes(snap.control_id)) return false;
+  return true;
+}
+
+function isHost(snap) {
+  return snap?.host !== false;
 }
 
 function formatTimeout(clock) {
@@ -206,8 +225,10 @@ function renderChrome() {
   const clock = snapshot?.clock;
   const paused = clock?.mode === "pause";
   els.playpause.textContent = paused ? "Play" : "Pause";
-  els.playpause.disabled = !snapshot;
-  els.step.disabled = !stepEnabled(snapshot);
+  const host = isHost(snapshot);
+  els.playpause.disabled = !snapshot || !host;
+  els.step.disabled = !host || !stepEnabled(snapshot);
+  els.timeoutS.disabled = !snapshot || !host;
   const speed = Number(clock?.speed);
   for (const btn of els.speeds.querySelectorAll("[data-speed]")) {
     const value = Number(btn.dataset.speed);
@@ -216,6 +237,8 @@ function renderChrome() {
   els.timeoutRemaining.textContent = formatTimeout(clock);
   const living = snapshot ? snapshot.population ?? livingList().length : "—";
   els.alive.textContent = `Alive ${living}/${POP_CAP}`;
+  const humanN = snapshot?.humans ? snapshot.humans.length : 0;
+  if (els.humans) els.humans.textContent = `Humans ${humanN}`;
   els.tick.textContent = `Tick ${snapshot ? snapshot.tick : "—"}`;
 }
 
@@ -326,6 +349,16 @@ function renderBanner() {
       <button type="button" data-op="auto">Auto</button>`;
     return;
   }
+  const waiting = snapshot.waiting || [];
+  if (
+    snapshot.control_id != null &&
+    waiting.length &&
+    !waiting.includes(snapshot.control_id)
+  ) {
+    el.className = "banner";
+    el.innerHTML = `<span>Waiting for other players…</span>`;
+    return;
+  }
   el.className = "banner hidden";
   el.innerHTML = "";
 }
@@ -346,6 +379,7 @@ function render() {
         selectedId,
         youId: snapshot.control_id ?? null,
         watchId: snapshot.spectate_id ?? null,
+        humans: snapshot.humans || [],
       },
       handleSurvivorClick
     );
@@ -361,6 +395,7 @@ function render() {
           selectedId,
           youId: snapshot.control_id ?? null,
           watchId: snapshot.spectate_id ?? null,
+          humans: snapshot.humans || [],
         }
       : {},
     handleSurvivorClick
@@ -394,13 +429,96 @@ function onClose(ev) {
   showError({ detail: code ? `disconnected (${code})` : "disconnected" });
 }
 
-const client = connect({
-  url: wsUrl,
-  onSnapshot,
-  onError,
-  onClose,
-});
-send = client.send;
+function showLobbyError(text) {
+  if (!els.lobbyError) return;
+  els.lobbyError.textContent = text;
+  els.lobbyError.classList.toggle("hidden", !text);
+}
+
+function renderLobbyList(rows) {
+  const list = rows || [];
+  if (els.lobbyEmpty) els.lobbyEmpty.classList.toggle("hidden", list.length > 0);
+  if (els.lobbyTable) els.lobbyTable.classList.toggle("hidden", list.length === 0);
+  if (!els.lobbyRows) return;
+  els.lobbyRows.innerHTML = list
+    .map((row) => {
+      const joinable = row.joinable;
+      return `<tr>
+        <td>${escapeHtml(row.host_name || row.id)}</td>
+        <td>${row.humans}</td>
+        <td>${row.alive}</td>
+        <td>${row.tick}</td>
+        <td>${
+          joinable
+            ? `<button type="button" data-join="${escapeHtml(row.id)}">Join</button>`
+            : "full"
+        }</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+async function refreshLobbies() {
+  try {
+    const response = await fetch("api/lobbies");
+    const body = await response.json();
+    renderLobbyList(body.lobbies || []);
+  } catch (err) {
+    showLobbyError(String(err));
+  }
+}
+
+async function newGame() {
+  showLobbyError("");
+  const seedRaw = els.lobbySeed && els.lobbySeed.value;
+  const payload = {};
+  if (seedRaw !== "" && seedRaw != null) payload.seed = Number(seedRaw);
+  const response = await fetch("api/lobbies", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    showLobbyError("Could not create game");
+    return;
+  }
+  const body = await response.json();
+  location.search = `?lobby=${encodeURIComponent(body.id)}`;
+}
+
+function startLobby() {
+  els.lobbyView.classList.remove("hidden");
+  els.playView.classList.add("hidden");
+  refreshLobbies();
+  setInterval(refreshLobbies, 2000);
+  els.newGame.addEventListener("click", () => {
+    newGame().catch((err) => showLobbyError(String(err)));
+  });
+  els.lobbyRows.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-join]");
+    if (!btn) return;
+    location.search = `?lobby=${encodeURIComponent(btn.dataset.join)}`;
+  });
+}
+
+function startPlay() {
+  els.lobbyView.classList.add("hidden");
+  els.playView.classList.remove("hidden");
+  const client = connect({
+    url: wsUrl,
+    onSnapshot,
+    onError,
+    onClose,
+  });
+  send = client.send;
+}
+
+const params = new URLSearchParams(location.search);
+if (params.get("lobby")) {
+  startPlay();
+} else {
+  startLobby();
+}
 
 els.playpause.addEventListener("click", () => {
   const paused = snapshot?.clock?.mode === "pause";

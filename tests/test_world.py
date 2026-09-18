@@ -206,3 +206,34 @@ def test_reset_event_ids_continue():
     events = world.snapshot()["events"]
     assert [e["kind"] for e in events] == ["reset"]
     assert events[0]["event_id"] == 2
+
+
+def test_two_human_commands_one_tick():
+    world = World(population=3, seed=0, control_id=1)
+    a, b, c = world.survivors()
+    a.produce = "fiber"
+    b.produce = "meat"
+    world.tick(
+        {
+            1: Command(action="produce"),
+            2: Command(action="produce"),
+        },
+        human_ids={1, 2},
+    )
+    assert world.tick_index == 1
+    assert a.action == "produce"
+    assert b.action == "produce"
+    assert c.action != "none"
+    snap = world.snapshot(viewer_id=2, human_ids={1, 2})
+    assert snap["control_id"] == 2
+    assert snap["humans"] == [1, 2]
+    assert [row["id"] for row in snap["survivors"] if row["is_player"]] == [1, 2]
+
+
+def test_possess_rejects_claimed():
+    world = World(population=3, seed=0, control_id=1)
+    with pytest.raises(ActError) as raised:
+        world.possess(2, claimed={2})
+    assert raised.value.code == "unknown_target"
+    assert world.control_id == 1
+    assert world.pick_successor(claimed={1}) == 2

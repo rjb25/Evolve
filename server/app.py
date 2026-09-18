@@ -3,10 +3,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from engine.survivor import ActError
 from server import session as session_mod
 
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
@@ -28,6 +29,36 @@ def health():
         "sessions": session_mod.session_count(),
         "max_sessions": session_mod.MAX_SESSIONS,
     }
+
+
+@app.get("/Evolution/api/lobbies")
+def lobbies():
+    return {"lobbies": session_mod.list_lobbies()}
+
+
+@app.post("/Evolution/api/lobbies")
+async def create_lobby(request: Request):
+    origin = request.headers.get("origin")
+    if origin not in session_mod.ALLOWED_WS_ORIGINS:
+        return JSONResponse({"error": "origin"}, status_code=403)
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    seed = body.get("seed")
+    if seed is not None:
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            seed = None
+    try:
+        lobby = await session_mod.create_lobby(seed=seed)
+    except ActError as exc:
+        return JSONResponse({"error": exc.code, "detail": exc.detail}, status_code=503)
+    return {"id": lobby.id, "seed": lobby.world.seed}
 
 
 @app.get("/Evolution/api/snapshot")

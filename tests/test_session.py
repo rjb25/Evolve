@@ -7,6 +7,7 @@ from starlette.websockets import WebSocketDisconnect
 from server.app import app
 from server.session import (
     ALLOWED_WS_ORIGINS,
+    LOBBIES,
     MAX_SESSIONS,
     SESSIONS,
     session_count,
@@ -20,6 +21,7 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
     SESSIONS.clear()
+    LOBBIES.clear()
 
 
 def _ws(client, path="/Evolution/ws"):

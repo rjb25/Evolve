@@ -58,17 +58,35 @@ class World:
         if len(self.events) > EVENT_RING:
             self.events = self.events[-EVENT_RING:]
 
-    def _clock_mode(self) -> str:
+    def living_human_ids(self, human_ids: set[int] | None = None) -> list[int]:
+        humans = self._human_set(human_ids)
+        return [
+            s.id
+            for s in self.survivors()
+            if s.alive() and s.id in humans
+        ]
+
+    def _human_set(self, human_ids: set[int] | None = None) -> set[int]:
+        if human_ids is not None:
+            return set(human_ids)
+        if self.control_id is not None:
+            return {self.control_id}
+        return set()
+
+    def _clock_mode(self, human_ids: set[int] | None = None) -> str:
         if not self.survivors():
             return "extinct"
         if self.pending_possess:
             return "awaiting_possess"
-        if self.control_id is None:
-            return "watching"
-        return "awaiting_player"
+        if self.living_human_ids(human_ids):
+            return "awaiting_player"
+        return "watching"
 
-    def validate_player_command(self, cmd: Command) -> None:
-        actor = self.registry.get_member("survivors", self.control_id)
+    def validate_player_command(
+        self, cmd: Command, actor_id: int | None = None
+    ) -> None:
+        aid = self.control_id if actor_id is None else actor_id
+        actor = self.registry.get_member("survivors", aid)
         if actor is None:
             raise ActError("invalid_command", "no seated player")
         if cmd.action not in actor.options:
@@ -87,23 +105,41 @@ class World:
             if cmd.action == "relate" and cmd.target_id in actor.relations:
                 raise ActError("invalid_command", "already related")
 
-    def tick(self, player_command: Command | None = None) -> dict:
-        if self.control_id is not None:
-            if player_command is None:
-                player_command = Command(action="produce")
-            self.validate_player_command(player_command)
+    def tick(
+        self,
+        player_command: Command | dict | None = None,
+        human_ids: set[int] | None = None,
+    ) -> dict:
+        if isinstance(player_command, dict):
+            commands = dict(player_command)
+            for actor_id, cmd in commands.items():
+                self.validate_player_command(cmd, actor_id=actor_id)
+        else:
+            commands = {}
+            if self.control_id is not None:
+                cmd = (
+                    player_command
+                    if player_command is not None
+                    else Command(action="produce")
+                )
+                self.validate_player_command(cmd, actor_id=self.control_id)
+                commands[self.control_id] = cmd
+        humans = self._human_set(human_ids) | set(commands)
         living = [s for s in self.survivors() if s.health > 0]
         for s in living:
             s.live()
-            if s.id == self.control_id:
-                s.act(self, player_command)
+            if s.id in commands:
+                s.act(self, commands[s.id])
             else:
                 s.act(self, None)
         dead_ids: list[int] = []
+        dead_humans: list[int] = []
         for s in list(self.survivors()):
             if not s.alive():
                 dead_ids.append(s.id)
                 self._emit(kind="death", actor=s.id, name=s.name)
+                if s.id in humans:
+                    dead_humans.append(s.id)
                 if s.id == self.control_id:
                     self.died_as_name = s.name
                     self.control_id = None
@@ -119,18 +155,31 @@ class World:
             self.pending_possess = False
             self.control_id = None
         self.tick_index += 1
-        return self.snapshot()
+        remaining_humans = humans - set(dead_humans)
+        snap = self.snapshot(human_ids=remaining_humans)
+        snap["_dead_humans"] = dead_humans
+        return snap
 
-    def pick_successor(self) -> int | None:
-        living = [s for s in self.survivors() if s.alive()]
+    def pick_successor(self, claimed: set[int] | None = None) -> int | None:
+        blocked = set(claimed or ())
+        living = [
+            s for s in self.survivors() if s.alive() and s.id not in blocked
+        ]
         if not living:
             return None
         return max(living, key=lambda s: (s.health, -s.id)).id
 
-    def possess(self, survivor_id: int) -> None:
+    def unclaimed_living(self, claimed: set[int] | None = None) -> list:
+        blocked = set(claimed or ())
+        return [s for s in self.survivors() if s.alive() and s.id not in blocked]
+
+    def possess(self, survivor_id: int, claimed: set[int] | None = None) -> None:
         target = self.registry.get_member("survivors", survivor_id)
         if target is None or not target.alive():
             raise ActError("unknown_target", f"id {survivor_id} is not living")
+        blocked = set(claimed or ())
+        if survivor_id in blocked:
+            raise ActError("unknown_target", f"id {survivor_id} is already seated")
         self.control_id = survivor_id
         self.spectate_id = survivor_id
         self.pending_possess = False
@@ -160,7 +209,13 @@ class World:
         self._next_event_id = next_event_id
         self._emit(kind="reset")
 
-    def snapshot(self) -> dict:
+    def snapshot(
+        self,
+        viewer_id: int | None = None,
+        human_ids: set[int] | None = None,
+    ) -> dict:
+        humans = self._human_set(human_ids)
+        viewer = self.control_id if viewer_id is None else viewer_id
         survivors = []
         for s in self.survivors():
             survivors.append(
@@ -175,14 +230,14 @@ class World:
                     "action": s.action,
                     "last_target": s.last_target,
                     "relations": list(s.relations),
-                    "is_player": s.id == self.control_id,
+                    "is_player": s.id in humans,
                     "alive": s.alive(),
                 }
             )
         actor = None
-        if self.control_id is not None:
-            actor = self.registry.get_member("survivors", self.control_id)
-        elif self.spectate_id is not None:
+        if viewer is not None:
+            actor = self.registry.get_member("survivors", viewer)
+        if actor is None and self.spectate_id is not None:
             actor = self.registry.get_member("survivors", self.spectate_id)
         deal_preview = {
             "excess": actor.excess() if actor else None,
@@ -193,8 +248,8 @@ class World:
             "v": 1,
             "tick": self.tick_index,
             "seed": self.seed,
-            "clock": {"mode": self._clock_mode()},
-            "control_id": self.control_id,
+            "clock": {"mode": self._clock_mode(humans)},
+            "control_id": self.control_id if viewer_id is None else viewer_id,
             "spectate_id": self.spectate_id,
             "pending_possess": self.pending_possess,
             "died_as_name": self.died_as_name,
@@ -202,4 +257,5 @@ class World:
             "survivors": survivors,
             "events": [e.as_dict() for e in self.events],
             "deal_preview": deal_preview,
+            "humans": sorted(humans),
         }

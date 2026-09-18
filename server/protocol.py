@@ -157,6 +157,10 @@ class Snapshot(BaseModel):
     survivors: list[SurvivorRow]
     events: list[EventRecord]
     deal_preview: DealPreview
+    humans: list[int] = []
+    host: bool = True
+    waiting: list[int] = []
+    lobby_id: str | None = None
 
 
 def error_frame(error: str, detail: str = "") -> dict:
