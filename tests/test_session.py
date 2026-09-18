@@ -39,11 +39,17 @@ def test_health(client):
 
 
 def test_index_under_evolution(client):
-    for path in ("/Evolution", "/Evolution/"):
+    for path in ("/Evolution", "/Evolution/", "/evolution", "/evolution/"):
         response = client.get(path)
         assert response.status_code == 200
         assert b"Evolution" in response.content
         assert b'<base href="/Evolution/">' in response.content
+
+
+def test_lowercase_evolution_api(client):
+    response = client.get("/evolution/api/health")
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
 
 
 def test_no_root_routes(client):

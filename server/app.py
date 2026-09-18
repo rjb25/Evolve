@@ -12,16 +12,40 @@ from server import session as session_mod
 
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
 
-app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+_PREFIX = "/evolution"
 
 
-@app.get("/Evolution")
-@app.get("/Evolution/")
+class _CanonicalEvolution:
+    """Serve /evolution the same as /Evolution (any non-canonical casing)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] in ("http", "websocket"):
+            path = scope.get("path") or ""
+            lower = path.lower()
+            if lower == _PREFIX or lower.startswith(_PREFIX + "/"):
+                if not path.startswith("/Evolution"):
+                    scope = dict(scope)
+                    canon = "/Evolution" + path[len(_PREFIX) :]
+                    scope["path"] = canon
+                    if "raw_path" in scope:
+                        scope["raw_path"] = canon.encode("utf-8")
+        await self.app(scope, receive, send)
+
+
+_app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+app = _CanonicalEvolution(_app)
+
+
+@_app.get("/Evolution")
+@_app.get("/Evolution/")
 def index():
     return FileResponse(WEB_ROOT / "index.html")
 
 
-@app.get("/Evolution/api/health")
+@_app.get("/Evolution/api/health")
 def health():
     return {
         "ok": True,
@@ -31,12 +55,12 @@ def health():
     }
 
 
-@app.get("/Evolution/api/lobbies")
+@_app.get("/Evolution/api/lobbies")
 def lobbies():
     return {"lobbies": session_mod.list_lobbies()}
 
 
-@app.post("/Evolution/api/lobbies")
+@_app.post("/Evolution/api/lobbies")
 async def create_lobby(request: Request):
     origin = request.headers.get("origin")
     if origin not in session_mod.ALLOWED_WS_ORIGINS:
@@ -61,7 +85,7 @@ async def create_lobby(request: Request):
     return {"id": lobby.id, "seed": lobby.world.seed}
 
 
-@app.get("/Evolution/api/snapshot")
+@_app.get("/Evolution/api/snapshot")
 async def debug_snapshot(sid: str | None = None):
     snap = await session_mod.snapshot_by_sid(sid)
     if snap is None:
@@ -69,7 +93,7 @@ async def debug_snapshot(sid: str | None = None):
     return snap
 
 
-@app.websocket("/Evolution/ws")
+@_app.websocket("/Evolution/ws")
 async def ws_endpoint(ws: WebSocket):
     origin = ws.headers.get("origin")
     if origin not in session_mod.ALLOWED_WS_ORIGINS:
@@ -78,4 +102,4 @@ async def ws_endpoint(ws: WebSocket):
     await session_mod.run_session(ws)
 
 
-app.mount("/Evolution/static", StaticFiles(directory=WEB_ROOT), name="static")
+_app.mount("/Evolution/static", StaticFiles(directory=WEB_ROOT), name="static")
