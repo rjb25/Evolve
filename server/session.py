@@ -132,10 +132,10 @@ class Lobby:
             except Exception:
                 client._closed = True
 
-    async def maybe_tick(self) -> None:
+    async def maybe_tick(self) -> bool:
         seats = self.living_seats()
         if not seats:
-            return
+            return False
         commands: dict[int, Command] = {}
         for client in seats:
             if client.submitted is not None:
@@ -143,7 +143,7 @@ class Lobby:
             elif client._timed_out():
                 commands[client.seat_id] = Command(action="produce")
             else:
-                return
+                return False
         for client in seats:
             client.submitted = None
         humans = self.claimed()
@@ -165,6 +165,7 @@ class Lobby:
                 client._arm_timeout()
         self.sync_host_control()
         await self.broadcast()
+        return True
 
     async def npc_tick(self) -> None:
         if self.living_seats():
@@ -268,8 +269,9 @@ class Lobby:
                     if mode == "watching":
                         await self.npc_tick()
                     elif mode == "awaiting_player":
-                        await self.maybe_tick()
-                        await self.broadcast()
+                        ticked = await self.maybe_tick()
+                        if not ticked:
+                            await self.broadcast()
                     else:
                         await self.broadcast()
         except asyncio.CancelledError:
@@ -284,13 +286,19 @@ class Lobby:
         if self._paused:
             return HEARTBEAT_S
         if not self.living_seats() and self.world.survivors():
-            return 1.0 / self.speed
+            return max(0.05, 1.0 / self.speed)
         soonest = HEARTBEAT_S
         for client in self.living_seats():
+            if client.submitted is not None:
+                continue
             if client.timeout_ms == 0:
                 continue
-            soonest = min(soonest, max(0.0, client._timeout_remaining_ms() / 1000.0))
-        return soonest
+            rem = client._timeout_remaining_ms() / 1000.0
+            if rem <= 0:
+                soonest = min(soonest, 0.05)
+            else:
+                soonest = min(soonest, rem)
+        return max(0.05, soonest)
 
     async def shutdown(self) -> None:
         self._closed = True

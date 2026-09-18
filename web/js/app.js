@@ -411,9 +411,25 @@ function clearError() {
   els.error.textContent = "";
 }
 
+function waitingKey(snap) {
+  return (snap?.waiting || []).join(",");
+}
+
 function onSnapshot(next) {
+  const prev = snapshot;
   snapshot = next;
   clearError();
+  if (
+    prev &&
+    next &&
+    prev.tick === next.tick &&
+    prev.control_id === next.control_id &&
+    waitingKey(prev) === waitingKey(next) &&
+    (prev.clock?.mode || "") === (next.clock?.mode || "")
+  ) {
+    els.timeoutRemaining.textContent = formatTimeout(next.clock);
+    return;
+  }
   render();
 }
 
