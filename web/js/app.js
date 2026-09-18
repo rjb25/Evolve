@@ -2,7 +2,7 @@ import { renderBoard } from "./board.js";
 import { renderGraph } from "./graph.js";
 import { renderLog } from "./log.js";
 import { connect, deriveWsUrl } from "./protocol.js";
-import { VERSION, bootHosted } from "./solfray.js";
+import { VERSION, bootHosted, offerResult, copyResult } from "./solfray.js";
 import {
   escapeHtml,
   floor0,
@@ -337,6 +337,7 @@ function renderBanner() {
   if (isExtinct(snapshot)) {
     el.className = "banner extinct";
     el.innerHTML = `<span>Extinction. New run.</span>
+      <button type="button" data-op="copy-result">Copy result</button>
       <button type="button" data-op="reset">New run</button>`;
     return;
   }
@@ -419,6 +420,7 @@ function waitingKey(snap) {
 function onSnapshot(next) {
   const prev = snapshot;
   snapshot = next;
+  offerResult(next);
   clearError();
   if (
     prev &&
@@ -542,6 +544,7 @@ function startPlay() {
       onClose: (ev) => {
         onClose(ev);
         snapshot = null;
+        offerResult(null);
         render();
         const delay = Math.min(8000, 400 * 2 ** retries);
         retries += 1;
@@ -636,6 +639,10 @@ els.panel.addEventListener("click", (ev) => {
 els.banner.addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-op]");
   if (!btn) return;
+  if (btn.dataset.op === "copy-result") {
+    copyResult();
+    return;
+  }
   if (btn.dataset.op === "reset") {
     send({ op: "reset" });
     return;

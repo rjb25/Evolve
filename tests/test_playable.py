@@ -119,3 +119,15 @@ def test_solfray_boot_helpers_match_manifest():
     assert "Solfray.connect" in app_js
     assert "bootBare" in app_js
     assert "bootHosted" in app_js
+
+
+def test_result_and_screenshot_hook():
+    boot = (WEB_ROOT / "js" / "solfray.js").read_text()
+    app_js = (WEB_ROOT / "js" / "app.js").read_text()
+    combined = boot + app_js
+    assert "sf.result" in combined or ".result(" in combined
+    assert 'data-op="copy-result"' in app_js
+    assert "Copy result" in app_js
+    assert "onScreenshot" in boot
+    assert "F9" not in combined
+    assert "keydown" not in combined
