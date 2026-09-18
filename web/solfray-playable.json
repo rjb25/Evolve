@@ -1,0 +1,11 @@
+{
+  "solfray_playable": 1,
+  "name": "Evolution",
+  "description": "Ten survivors, three goods, produce / deal / relate. Python sim; you are one body in the population.",
+  "aspect": "4:3",
+  "start_url": "/Evolution/",
+  "players": { "min": 1, "max": 10 },
+  "version": "1.0.0",
+  "author": "Evolve",
+  "tags": ["survival", "multiplayer", "sim"]
+}

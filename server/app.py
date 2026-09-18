@@ -11,8 +11,12 @@ from engine.survivor import ActError
 from server import session as session_mod
 
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
+PLAYABLE_PATH = WEB_ROOT / "solfray-playable.json"
 
 _PREFIX = "/evolution"
+_JSON = "/evolution.json"
+_CSP = b"frame-ancestors https://solfray.com"
+_NO_CACHE = b"no-cache"
 
 
 class _CanonicalEvolution:
@@ -25,24 +29,63 @@ class _CanonicalEvolution:
         if scope["type"] in ("http", "websocket"):
             path = scope.get("path") or ""
             lower = path.lower()
-            if lower == _PREFIX or lower.startswith(_PREFIX + "/"):
+            canon = None
+            if lower == _JSON:
+                canon = "/Evolution.json"
+            elif lower == _PREFIX or lower.startswith(_PREFIX + "/"):
                 if not path.startswith("/Evolution"):
-                    scope = dict(scope)
                     canon = "/Evolution" + path[len(_PREFIX) :]
-                    scope["path"] = canon
-                    if "raw_path" in scope:
-                        scope["raw_path"] = canon.encode("utf-8")
+            if canon is not None and path != canon:
+                scope = dict(scope)
+                scope["path"] = canon
+                if "raw_path" in scope:
+                    scope["raw_path"] = canon.encode("utf-8")
         await self.app(scope, receive, send)
 
 
+class _FramingHeaders:
+    """CSP + no-cache on HTML/JSON only so static assets stay cacheable."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers") or [])
+                ctype = b""
+                for key, val in headers:
+                    if key.lower() == b"content-type":
+                        ctype = val.lower()
+                        break
+                if b"text/html" in ctype or b"application/json" in ctype:
+                    headers.append((b"content-security-policy", _CSP))
+                    headers.append((b"cache-control", _NO_CACHE))
+                message = dict(message)
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
 _app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app = _CanonicalEvolution(_app)
+app = _CanonicalEvolution(_FramingHeaders(_app))
 
 
 @_app.get("/Evolution")
 @_app.get("/Evolution/")
 def index():
     return FileResponse(WEB_ROOT / "index.html")
+
+
+@_app.get("/Evolution.json")
+@_app.get("/Evolution/solfray-playable.json")
+def playable():
+    return FileResponse(PLAYABLE_PATH, media_type="application/json")
 
 
 @_app.get("/Evolution/api/health")
