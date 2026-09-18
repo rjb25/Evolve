@@ -45,6 +45,14 @@ location = /Evolution.json {
     add_header Content-Security-Policy "frame-ancestors https://solfray.com" always;
     add_header Cache-Control "no-cache" always;
 }
+# Lowercase alias (case-sensitive so /Evolution/ is not a redirect loop).
+# Exact /evolution.json must sit before the regex (exact already wins).
+location = /evolution {
+    return 302 /Evolution/$is_args$args;
+}
 location = /evolution.json {
     return 302 /Evolution.json;
+}
+location ~ ^/evolution(/.*)?$ {
+    return 302 /Evolution$1$is_args$args;
 }
