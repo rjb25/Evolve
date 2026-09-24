@@ -31,10 +31,11 @@ class ActCommand(BaseModel):
     op: Literal["act"]
     action: Literal["produce", "deal", "relate"]
     target_id: int | None = None
+    offer_id: int | None = None
 
     @model_validator(mode="after")
-    def deal_relate_need_target(self) -> ActCommand:
-        if self.action in ("deal", "relate") and self.target_id is None:
+    def relate_needs_target(self) -> ActCommand:
+        if self.action == "relate" and self.target_id is None:
             raise ValueError("deal/relate need a living non-self target")
         return self
 
@@ -110,6 +111,13 @@ class ClockState(BaseModel):
     timeout_remaining_ms: int
 
 
+class DealOffer(BaseModel):
+    id: int
+    give: str
+    get: str
+    posted_tick: int
+
+
 class SurvivorRow(BaseModel):
     id: int
     name: str
@@ -121,6 +129,7 @@ class SurvivorRow(BaseModel):
     action: str
     last_target: int | None
     relations: list[int]
+    deals: list[DealOffer] = []
     is_player: bool
     alive: bool
 
@@ -136,6 +145,7 @@ class EventRecord(BaseModel):
     give: str | None = None
     get: str | None = None
     accepted: bool | None = None
+    offer_id: int | None = None
 
 
 class DealPreview(BaseModel):
@@ -172,7 +182,7 @@ def validate_act(
 ) -> None:
     if clock_mode != "awaiting_player":
         raise ProtocolError("invalid_command", "not awaiting player")
-    if cmd.action in ("deal", "relate"):
+    if cmd.action == "relate":
         if cmd.target_id is None or (
             actor_id is not None and cmd.target_id == actor_id
         ):
@@ -180,6 +190,11 @@ def validate_act(
                 "invalid_command",
                 "deal/relate need a living non-self target",
             )
+    if cmd.action == "deal" and actor_id is not None and cmd.target_id == actor_id:
+        raise ProtocolError(
+            "invalid_command",
+            "deal/relate need a living non-self target",
+        )
 
 
 def _validation_detail(exc: ValidationError) -> str:

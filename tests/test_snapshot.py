@@ -24,6 +24,7 @@ def test_tick_zero_snapshot_shape():
         assert row["action"] == "none"
         assert row["last_target"] is None
         assert row["relations"] == []
+        assert row["deals"] == []
         assert row["alive"] is True
     assert snap["survivors"][0]["is_player"] is True
     assert snap["survivors"][1]["is_player"] is False
@@ -38,20 +39,22 @@ def test_last_target_null_when_unset():
     assert encoded["survivors"][0]["last_target"] is None
 
 
-def test_last_target_set_on_deal_even_if_refused():
+def test_last_target_set_on_fulfill():
     world = World(population=2, seed=0, control_id=1)
     a, b = world.survivors()
     a.fiber, a.meat, a.water = 12, 4, 10
-    b.fiber, b.meat, b.water = 3, 2, 10
+    b.fiber, b.meat, b.water = 3, 8, 10
     a.relations = [b.id]
     b.relations = [a.id]
-    a.act(world, Command(action="deal", target_id=b.id))
+    a.act(world, Command(action="deal"))
+    b.act(world, Command(action="deal", target_id=a.id))
     snap = world.snapshot()
-    player = next(row for row in snap["survivors"] if row["id"] == a.id)
-    assert player["last_target"] == b.id
+    friend = next(row for row in snap["survivors"] if row["id"] == b.id)
+    assert friend["last_target"] == a.id
     deals = [e for e in snap["events"] if e["kind"] == "deal"]
     assert deals
-    assert deals[-1]["accepted"] is False
+    assert deals[-1]["accepted"] is True
+    assert deals[-1]["offer_id"] == 1
 
 
 def test_event_ring_and_player_produce():

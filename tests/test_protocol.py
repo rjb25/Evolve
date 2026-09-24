@@ -25,12 +25,15 @@ def test_parse_produce():
     assert cmd.target_id is None
 
 
-def test_parse_deal_requires_target():
-    cmd = parse_message({"op": "act", "action": "deal", "target_id": 7})
+def test_parse_deal_advertise_and_fulfill():
+    listed = parse_message({"op": "act", "action": "deal"})
+    assert listed.target_id is None
+    assert listed.offer_id is None
+    cmd = parse_message(
+        {"op": "act", "action": "deal", "target_id": 7, "offer_id": 3}
+    )
     assert cmd.target_id == 7
-    with pytest.raises(ProtocolError) as raised:
-        parse_message({"op": "act", "action": "deal"})
-    assert raised.value.error == "invalid_command"
+    assert cmd.offer_id == 3
 
 
 def test_parse_relate_requires_target():
@@ -128,6 +131,11 @@ def test_message_too_large():
     with pytest.raises(ProtocolError) as raised:
         parse_message(payload)
     assert raised.value.error == "message_too_large"
+
+
+def test_validate_act_allows_deal_advertise():
+    cmd = parse_message({"op": "act", "action": "deal"})
+    validate_act(cmd, clock_mode="awaiting_player", actor_id=1)
 
 
 def test_validate_act_rejects_self_target():

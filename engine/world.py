@@ -38,7 +38,7 @@ class World:
         # Spawn RNG: Dna is already constructed (26 laws + 10 rules).
         # Per survivor: specialty, make_weights(3), make_word(6), unique_id.
         # Per-tick NPC RNG: (1) choice(options, weights) (2) always random_target()
-        # even on produce/deal (3) if deal and relations nonempty, rng.choice(relations).
+        # even on produce/deal. Deal no longer draws rng.choice(relations).
         for _ in range(population):
             survivor = Survivor(self)
             self.registry.add_member("survivors", survivor)
@@ -91,7 +91,7 @@ class World:
             raise ActError("invalid_command", "no seated player")
         if cmd.action not in actor.options:
             raise ActError("invalid_command", "action not in options")
-        if cmd.action in ("deal", "relate"):
+        if cmd.action == "relate":
             if cmd.target_id is None or cmd.target_id == actor.id:
                 raise ActError(
                     "invalid_command",
@@ -100,10 +100,27 @@ class World:
             target = self.registry.get_member("survivors", cmd.target_id)
             if target is None or not target.alive():
                 raise ActError("unknown_target", f"id {cmd.target_id} is not living")
-            if cmd.action == "deal" and cmd.target_id not in actor.relations:
-                raise ActError("unknown_target", "not in relations")
-            if cmd.action == "relate" and cmd.target_id in actor.relations:
+            if cmd.target_id in actor.relations:
                 raise ActError("invalid_command", "already related")
+            return
+        if cmd.action == "deal":
+            if cmd.target_id is None:
+                return
+            if cmd.target_id == actor.id:
+                raise ActError(
+                    "invalid_command",
+                    "deal/relate need a living non-self target",
+                )
+            target = self.registry.get_member("survivors", cmd.target_id)
+            if target is None or not target.alive():
+                raise ActError("unknown_target", f"id {cmd.target_id} is not living")
+            if cmd.target_id not in actor.relations:
+                raise ActError("unknown_target", "not in relations")
+            if cmd.offer_id is None:
+                if not target.deals:
+                    raise ActError("unknown_target", "no matching offer")
+            elif not any(offer.id == cmd.offer_id for offer in target.deals):
+                raise ActError("unknown_target", "no matching offer")
 
     def tick(
         self,
@@ -230,6 +247,7 @@ class World:
                     "action": s.action,
                     "last_target": s.last_target,
                     "relations": list(s.relations),
+                    "deals": [offer.as_dict() for offer in s.deals],
                     "is_player": s.id in humans,
                     "alive": s.alive(),
                 }

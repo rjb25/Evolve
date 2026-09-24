@@ -117,17 +117,61 @@ function formatTimeout(clock) {
   return `${(floor0(ms) / 1000).toFixed(1)}s`;
 }
 
-function dealPreviewText(preview) {
+function dealPreviewText(preview, you) {
   const excess = preview?.excess;
   const need = preview?.need;
   if (!excess || !need) return "";
-  return `offer ${excess} (−9) for ${need} (+10); they accept if their ${need} > their ${excess} − 1`;
+  const n = Array.isArray(you?.deals) ? you.deals.length : 0;
+  let text = `list ${excess} (−9) for ${need} (+10) (${n}/5)`;
+  if (n >= 5) text += "; oldest listing will be dropped";
+  if (livingRelations(you).length === 0) {
+    text += ". Relate someone to let them take it";
+  }
+  return text;
 }
 
 function livingRelations(actor) {
   if (!actor) return [];
   const living = new Set(livingList().map((row) => row.id));
   return (actor.relations || []).filter((id) => living.has(id));
+}
+
+function listingRows(you) {
+  const rows = [];
+  if (!you) return rows;
+  const related = new Set(you.relations || []);
+  for (const survivor of livingList()) {
+    const deals = survivor.deals || [];
+    if (!deals.length) continue;
+    const mine = survivor.id === you.id;
+    if (!mine && !related.has(survivor.id)) continue;
+    for (const deal of deals) {
+      rows.push({ survivor, deal, mine });
+    }
+  }
+  return rows;
+}
+
+function renderListings(rows, canAct) {
+  if (!rows.length) {
+    return `<h3 class="sub">Listings</h3><p class="sub">None visible.</p>`;
+  }
+  const items = rows
+    .map((row) => {
+      const name = escapeHtml(row.survivor.name || "");
+      const give = escapeHtml(row.deal.give || "?");
+      const get = escapeHtml(row.deal.get || "?");
+      const label = `${name} #${row.survivor.id} ${give}→${get}`;
+      if (row.mine) {
+        return `<li class="mine">${label} (yours)</li>`;
+      }
+      if (!canAct) {
+        return `<li>${label}</li>`;
+      }
+      return `<li><button type="button" data-fulfill="${row.survivor.id}" data-offer="${row.deal.id}">${label}</button></li>`;
+    })
+    .join("");
+  return `<h3 class="sub">Listings</h3><ul class="listings">${items}</ul>`;
 }
 
 function relateCandidates(actor) {
@@ -143,11 +187,6 @@ function clearTargetIfInvalid() {
   }
   const you = survivorById(snapshot.control_id);
   if (!actsEnabled(snapshot) || !you || !you.alive) {
-    targeting = null;
-    selectedId = null;
-    return;
-  }
-  if (targeting === "deal" && livingRelations(you).length === 0) {
     targeting = null;
     selectedId = null;
     return;
@@ -180,15 +219,6 @@ function handleSurvivorClick(id) {
     render();
     return;
   }
-  if (
-    targeting === "deal" &&
-    youAlive &&
-    isValidTarget(target, snapshot, "deal", snapshot.control_id)
-  ) {
-    selectedId = id;
-    render();
-    return;
-  }
   if (isAwaitingPossess(snapshot)) {
     send({ op: "possess", id });
     return;
@@ -198,9 +228,7 @@ function handleSurvivorClick(id) {
 
 function confirmTargetedAct() {
   if (!actsEnabled(snapshot) || !targeting || selectedId == null) return;
-  if (targeting === "deal") {
-    send({ op: "act", action: "deal", target_id: selectedId });
-  } else if (targeting === "relate") {
+  if (targeting === "relate") {
     send({ op: "act", action: "relate", target_id: selectedId });
   }
   targeting = null;
@@ -255,10 +283,10 @@ function renderPanel() {
   const title = isYou ? "YOU" : "SPECTATE";
   const canAct = isYou && actsEnabled(snapshot);
   const rels = livingRelations(subject);
-  const dealOk = canAct && livingRelations(you).length > 0;
   const relateOk = canAct && relateCandidates(you).length > 0;
-  const preview = dealPreviewText(snapshot.deal_preview);
+  const preview = dealPreviewText(snapshot.deal_preview, you);
   const selected = selectedId != null ? survivorById(selectedId) : null;
+  const listings = listingRows(you);
 
   let body = `<h2>${title}</h2>`;
   if (!subject || !subject.alive) {
@@ -288,21 +316,19 @@ function renderPanel() {
     }`;
   }
 
+  body += renderListings(listings, canAct);
+
   if (canAct) {
     body += `<div class="actions">
       <button type="button" data-act="produce">Produce</button>
-      <button type="button" data-mode="deal" ${dealOk ? "" : "disabled"} aria-pressed="${targeting === "deal"}">Deal</button>
+      <button type="button" data-act="deal">Deal</button>
       <button type="button" data-mode="relate" ${relateOk ? "" : "disabled"} aria-pressed="${targeting === "relate"}">Relate</button>
       <button type="button" data-act="produce">Skip (produce)</button>
     </div>`;
-    if (targeting === "deal") {
-      body += `<div class="preview">${escapeHtml(preview || "Select a living relation.")}`;
-      if (selected) {
-        body += `<div>target: ${escapeHtml(selected.name)} #${selected.id}</div>
-          <button type="button" data-confirm="deal">Confirm deal</button>`;
-      }
-      body += `</div>`;
-    } else if (targeting === "relate") {
+    if (preview) {
+      body += `<div class="preview">${escapeHtml(preview)}</div>`;
+    }
+    if (targeting === "relate") {
       body += `<div class="preview">Select a living survivor you are not already related to.`;
       if (selected) {
         body += `<div>target: ${escapeHtml(selected.name)} #${selected.id}</div>
@@ -621,6 +647,23 @@ els.panel.addEventListener("click", (ev) => {
     targeting = null;
     selectedId = null;
     send({ op: "act", action: "produce" });
+    return;
+  }
+  if (btn.dataset.act === "deal") {
+    if (!actsEnabled(snapshot)) return;
+    targeting = null;
+    selectedId = null;
+    send({ op: "act", action: "deal" });
+    return;
+  }
+  if (btn.dataset.fulfill != null) {
+    if (!actsEnabled(snapshot)) return;
+    const targetId = Number(btn.dataset.fulfill);
+    const offerId = Number(btn.dataset.offer);
+    if (!Number.isFinite(targetId) || !Number.isFinite(offerId)) return;
+    targeting = null;
+    selectedId = null;
+    send({ op: "act", action: "deal", target_id: targetId, offer_id: offerId });
     return;
   }
   if (btn.dataset.mode) {

@@ -19,12 +19,18 @@ def parse_command(raw: str, options: list[str] | None = None) -> Command:
     except (ValueError, TypeError, IndexError):
         action = options[0]
     target_id = None
+    offer_id = None
     if len(parts) > 1:
         try:
             target_id = int(parts[1])
         except (ValueError, TypeError):
             target_id = None
-    return Command(action=action, target_id=target_id)
+    if len(parts) > 2:
+        try:
+            offer_id = int(parts[2])
+        except (ValueError, TypeError):
+            offer_id = None
+    return Command(action=action, target_id=target_id, offer_id=offer_id)
 
 
 def print_roster(world: World) -> None:

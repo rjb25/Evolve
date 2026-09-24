@@ -73,9 +73,6 @@ export function isValidTarget(survivor, snapshot, mode, youId) {
   if (mode === "relate") {
     return survivor.id !== you.id && !relations.includes(survivor.id);
   }
-  if (mode === "deal") {
-    return relations.includes(survivor.id);
-  }
   return false;
 }
 
@@ -98,6 +95,7 @@ function tileHtml(row, snapshot, view) {
   }
   const verb = String(row.action || "none").toUpperCase();
   const relCount = Array.isArray(row.relations) ? row.relations.length : 0;
+  const dealCount = Array.isArray(row.deals) ? row.deals.length : 0;
   return `<article class="${classes.join(" ")}" data-id="${row.id}" role="button" tabindex="0">
     <div class="tile-top">
       ${renderGlyph(row.name)}
@@ -112,6 +110,7 @@ function tileHtml(row, snapshot, view) {
     <div class="tile-foot">
       <span class="chip">${escapeHtml(verb)}</span>
       <span class="rels">rel ${relCount}</span>
+      <span class="rels">list ${dealCount}</span>
     </div>
   </article>`;
 }
@@ -142,7 +141,7 @@ export function renderBoard(root, snapshot, view = {}, onClick) {
   }
 
   const living = [...livingById(snapshot).values()];
-  root.classList.toggle("is-targeting", opts.mode === "deal" || opts.mode === "relate");
+  root.classList.toggle("is-targeting", opts.mode === "relate");
   root.classList.toggle("empty", living.length === 0);
   if (!living.length) {
     root.innerHTML = `<div>No living survivors.</div>`;

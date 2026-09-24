@@ -64,6 +64,15 @@ def test_self_deal_rejected_without_mutating():
     assert _goods(world) == before_goods
 
 
+def test_player_advertise_without_target_advances():
+    world = World(population=2, seed=0, control_id=1)
+    actor = world.survivors()[0]
+    world.tick(Command(action="deal"))
+    assert world.tick_index == 1
+    assert actor.action == "deal"
+    assert len(actor.deals) == 1
+
+
 def test_player_deal_unknown_target_does_not_advance():
     world = World(population=2, seed=0, control_id=1)
     before_goods = _goods(world)
@@ -96,7 +105,7 @@ def test_seated_player_tick_none_is_produce():
     assert getattr(s, specialty) == before - 1 + 20
 
 
-def test_npc_deal_empty_relations_does_not_raise():
+def test_npc_deal_empty_relations_advertises():
     world = World(population=2, seed=0, spectate_only=True)
     for s in world.survivors():
         s.weights = [0.0, 1.0, 0.0]
@@ -105,6 +114,7 @@ def test_npc_deal_empty_relations_does_not_raise():
     assert world.tick_index == 1
     for s in world.survivors():
         assert s.action == "deal"
+        assert len(s.deals) == 1
 
 
 def test_npc_relate_when_fully_tied_does_not_raise():
@@ -117,6 +127,18 @@ def test_npc_relate_when_fully_tied_does_not_raise():
     assert world.tick_index == 1
     for s in world.survivors():
         assert s.action == "relate"
+
+
+def test_death_drops_publisher_deals():
+    world = World(population=2, seed=0, spectate_only=True)
+    a, b = world.survivors()
+    a.act(world, Command(action="deal"))
+    assert a.deals
+    a.health = 0
+    world.tick()
+    living_ids = [s.id for s in world.survivors()]
+    assert a.id not in living_ids
+    assert all(s.id != a.id for s in world.survivors())
 
 
 def test_death_sweep_prunes_relations_and_last_target():

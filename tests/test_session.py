@@ -145,6 +145,19 @@ def test_act_rejected_when_not_awaiting_player(client):
         assert later["tick"] == tick
 
 
+def test_advertise_without_target(client):
+    with _ws(client) as ws:
+        snap = ws.receive_json()
+        assert snap["survivors"][0]["deals"] == []
+        ws.send_json({"op": "act", "action": "deal"})
+        listed = ws.receive_json()
+        assert listed["tick"] == 1
+        you = next(row for row in listed["survivors"] if row["id"] == listed["control_id"])
+        assert len(you["deals"]) == 1
+        kinds = [e["kind"] for e in listed["events"]]
+        assert "list" in kinds
+
+
 def test_self_target_rejected(client):
     with _ws(client) as ws:
         snap = ws.receive_json()

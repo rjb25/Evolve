@@ -401,7 +401,7 @@ export function renderGraph(svgRoot, snapshot, view = {}, onClick) {
   svgRoot.classList.toggle("empty", empty);
   svgRoot.classList.toggle(
     "is-targeting",
-    opts.mode === "deal" || opts.mode === "relate"
+    opts.mode === "relate"
   );
 
   applyPositions(state);

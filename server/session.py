@@ -470,7 +470,11 @@ class Session:
             )
             if self.seat_id is None:
                 raise ProtocolError("invalid_command", "no seated player")
-            command = Command(action=cmd.action, target_id=cmd.target_id)
+            command = Command(
+                action=cmd.action,
+                target_id=cmd.target_id,
+                offer_id=cmd.offer_id,
+            )
             self.world.validate_player_command(command, actor_id=self.seat_id)
         except ProtocolError as exc:
             await self._send_error(exc.error, exc.detail)

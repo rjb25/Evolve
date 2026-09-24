@@ -3,6 +3,8 @@ import { escapeHtml } from "./board.js";
 const KINDS = new Set([
   "produce",
   "deal",
+  "list",
+  "unlist",
   "relate",
   "death",
   "possess",
@@ -31,12 +33,21 @@ function formatEvent(ev, names) {
   switch (ev.kind) {
     case "produce":
       return `${label(ev.actor, names, ev.name)} produced`;
+    case "list": {
+      const give = ev.give || "?";
+      const get = ev.get || "?";
+      return `${actor} listed ${give}→${get}`;
+    }
+    case "unlist": {
+      const give = ev.give || "?";
+      const get = ev.get || "?";
+      return `${actor} dropped ${give}→${get}`;
+    }
     case "deal": {
       const give = ev.give || "?";
       const get = ev.get || "?";
-      const outcome = ev.accepted ? "accepted" : "refused";
       const withWhom = target != null ? ` with ${target}` : "";
-      return `${actor} deal ${give}→${get}${withWhom} ${outcome}`;
+      return `${actor} deal ${give}→${get}${withWhom} accepted`;
     }
     case "relate":
       return target != null ? `${actor} related ${target}` : `${actor} related`;

@@ -14,6 +14,7 @@ class Event:
     give: str | None = None
     get: str | None = None
     accepted: bool | None = None
+    offer_id: int | None = None
 
     def as_dict(self) -> dict:
         data = {
@@ -33,4 +34,6 @@ class Event:
             data["get"] = self.get
         if self.accepted is not None:
             data["accepted"] = self.accepted
+        if self.offer_id is not None:
+            data["offer_id"] = self.offer_id
         return data
