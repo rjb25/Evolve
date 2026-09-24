@@ -1,0 +1,58 @@
+# Paste into the existing roleplaycardgame.com server{} (TLS already
+# terminates there). This process is HTTP on 127.0.0.1:8767 only —
+# do not expose it on a public bind.
+#
+# Cut over only after this snippet AND deploy/evolvevisualizer.service
+# are in place. Heartbeats every 1s; if /Evolution/api/health is green
+# but the browser WS fails, check Upgrade/Connection headers and the
+# browser console.
+#
+# Rollback: restore the previous nginx location / static files for
+# /Evolution, then `nginx -t && systemctl reload nginx`. The uvicorn
+# process can stay down.
+#
+# Origins the app allows (server/session.py ALLOWED_WS_ORIGINS):
+#   https://roleplaycardgame.com
+#   http://127.0.0.1:8765
+#   http://localhost:8765
+# Forward Origin so the app sees the browser origin, not the upstream.
+
+location /Evolution/ {
+    # NO trailing slash on proxy_pass: the /Evolution prefix is forwarded
+    # intact to FastAPI. `proxy_pass http://127.0.0.1:8767/;` would strip
+    # /Evolution and FastAPI would see /ws, which is not a route.
+    # Do not ALSO set FastAPI root_path — pick one; we keep the prefix.
+    proxy_pass http://127.0.0.1:8767;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header Origin $http_origin;
+    proxy_read_timeout 3600s;   # awaiting_player can sit past default 60s
+    # CSP/no-cache come from the app (HTML/JSON only). add_header here
+    # would also hit /static and the WebSocket upgrade.
+}
+location = /Evolution {
+    # $is_args$args keeps ?seed= / ?spectate=1; bare return 302 /Evolution/;
+    # would drop them (unlike rewrite ... redirect).
+    return 302 /Evolution/$is_args$args;
+}
+location = /Evolution.json {
+    proxy_pass http://127.0.0.1:8767;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Origin $http_origin;
+    add_header Content-Security-Policy "frame-ancestors https://solfray.com" always;
+    add_header Cache-Control "no-cache" always;
+}
+# Lowercase alias (case-sensitive so /Evolution/ is not a redirect loop).
+# Exact /evolution.json must sit before the regex (exact already wins).
+location = /evolution {
+    return 302 /Evolution/$is_args$args;
+}
+location = /evolution.json {
+    return 302 /Evolution.json;
+}
+location ~ ^/evolution(/.*)?$ {
+    return 302 /Evolution$1$is_args$args;
+}
